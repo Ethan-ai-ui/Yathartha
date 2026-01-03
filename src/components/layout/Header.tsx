@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { 
@@ -11,7 +11,8 @@ import {
   BarChart3,
   Globe,
   ChevronDown,
-  Zap
+  Zap,
+  LogOut
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -19,6 +20,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AuthModal } from "@/components/AuthModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navigation = [
   { name: "Verify", href: "/verify", icon: FileSearch },
@@ -35,10 +38,21 @@ const languages = [
 
 export function Header() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [currentLang, setCurrentLang] = useState(languages[0]);
+  const [authModal, setAuthModal] = useState<{ isOpen: boolean; mode: "login" | "signup" }>({
+    isOpen: false,
+    mode: "login",
+  });
+  const { user, logout } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-xl">
@@ -113,13 +127,52 @@ export function Header() {
 
           {/* Auth Buttons */}
           <div className="hidden items-center gap-2 sm:flex">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              Sign In
-            </Button>
-            <Button size="sm" className="gap-2 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15">
-              <Zap className="h-4 w-4" />
-              Get Started
-            </Button>
+            {user ? (
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="gap-2">
+                      <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                        {user.username.charAt(0).toUpperCase()}
+                      </div>
+                      {user.username}
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link to="/dashboard">Dashboard</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile">Profile</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => setAuthModal({ isOpen: true, mode: "login" })}
+                >
+                  Sign In
+                </Button>
+                <Button 
+                  size="sm" 
+                  className="gap-2 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15"
+                  onClick={() => setAuthModal({ isOpen: true, mode: "signup" })}
+                >
+                  <Zap className="h-4 w-4" />
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu */}
@@ -163,19 +216,62 @@ export function Header() {
                 </nav>
 
                 <div className="flex flex-col gap-2 pt-4 border-t border-border">
-                  <Button variant="outline" className="w-full border-border hover:bg-muted/50">
-                    Sign In
-                  </Button>
-                  <Button className="w-full bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15">
-                    <Zap className="mr-2 h-4 w-4" />
-                    Get Started
-                  </Button>
+                  {user ? (
+                    <>
+                      <Link to="/dashboard" onClick={() => setMobileOpen(false)}>
+                        <Button variant="outline" className="w-full border-border hover:bg-muted/50">
+                          Dashboard
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="outline" 
+                        className="w-full border-border hover:bg-muted/50 text-red-600"
+                        onClick={() => {
+                          handleLogout();
+                          setMobileOpen(false);
+                        }}
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Logout
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button 
+                        variant="outline" 
+                        className="w-full border-border hover:bg-muted/50"
+                        onClick={() => {
+                          setAuthModal({ isOpen: true, mode: "login" });
+                          setMobileOpen(false);
+                        }}
+                      >
+                        Sign In
+                      </Button>
+                      <Button 
+                        className="w-full bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15"
+                        onClick={() => {
+                          setAuthModal({ isOpen: true, mode: "signup" });
+                          setMobileOpen(false);
+                        }}
+                      >
+                        <Zap className="mr-2 h-4 w-4" />
+                        Get Started
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </SheetContent>
           </Sheet>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={authModal.isOpen} 
+        onClose={() => setAuthModal({ ...authModal, isOpen: false })} 
+        mode={authModal.mode} 
+      />
     </header>
   );
 }
