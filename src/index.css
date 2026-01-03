@@ -1,0 +1,290 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* Dark Minimal Tech Theme */
+    --background: 220 20% 7%;
+    --foreground: 210 20% 92%;
+
+    --card: 220 18% 10%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 220 18% 9%;
+    --popover-foreground: 210 20% 92%;
+
+    /* Primary - Muted Cyan */
+    --primary: 185 60% 45%;
+    --primary-foreground: 220 20% 7%;
+
+    /* Secondary - Muted Purple */
+    --secondary: 260 30% 20%;
+    --secondary-foreground: 210 20% 92%;
+
+    --muted: 220 15% 13%;
+    --muted-foreground: 215 15% 50%;
+
+    /* Accent - Soft Magenta */
+    --accent: 320 50% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Semantic Status Colors - Muted variants */
+    --verified: 145 50% 42%;
+    --verified-foreground: 0 0% 0%;
+    
+    --warning: 45 60% 48%;
+    --warning-foreground: 0 0% 0%;
+    
+    --danger: 0 55% 50%;
+    --danger-foreground: 0 0% 100%;
+    
+    --info: 200 55% 50%;
+    --info-foreground: 0 0% 0%;
+
+    --border: 220 15% 16%;
+    --input: 220 15% 14%;
+    --ring: 185 50% 45%;
+
+    --radius: 0.75rem;
+
+    /* Subtle Glass Effects */
+    --glass-bg: 220 18% 10% / 0.7;
+    --glass-border: 185 50% 45% / 0.1;
+
+    /* Gradients - More subtle */
+    --gradient-hero: linear-gradient(135deg, hsl(220 20% 8%) 0%, hsl(260 20% 10%) 50%, hsl(220 20% 8%) 100%);
+    --gradient-cyber: linear-gradient(135deg, hsl(185 50% 45% / 0.05) 0%, hsl(320 50% 50% / 0.05) 100%);
+
+    /* Subtle Shadows */
+    --shadow-neon: 0 0 15px hsl(185 50% 45% / 0.15);
+    --shadow-lg: 0 10px 40px hsl(0 0% 0% / 0.4);
+
+    --sidebar-background: 220 18% 9%;
+    --sidebar-foreground: 210 20% 85%;
+    --sidebar-primary: 185 50% 45%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 220 15% 14%;
+    --sidebar-accent-foreground: 210 20% 85%;
+    --sidebar-border: 220 15% 16%;
+    --sidebar-ring: 185 50% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  /* Subtle Glass Cards */
+  .glass-card {
+    @apply bg-card/50 backdrop-blur-lg border border-border shadow-lg;
+  }
+
+  .glass-panel {
+    @apply bg-card/30 backdrop-blur-xl border border-border/50;
+  }
+
+  /* Subtle Borders */
+  .cyber-border {
+    @apply border border-primary/20;
+  }
+
+  .cyber-border-accent {
+    @apply border border-accent/20;
+  }
+
+  /* Gradient Backgrounds - Subtle */
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .gradient-cyber {
+    background: var(--gradient-cyber);
+  }
+
+  .gradient-mesh {
+    background: 
+      radial-gradient(at 20% 30%, hsl(185 50% 45% / 0.04) 0%, transparent 50%),
+      radial-gradient(at 80% 70%, hsl(320 50% 50% / 0.03) 0%, transparent 50%);
+  }
+
+  /* Status Badges - Cleaner */
+  .status-verified {
+    @apply bg-verified/10 text-verified border border-verified/20;
+  }
+
+  .status-warning {
+    @apply bg-warning/10 text-warning border border-warning/20;
+  }
+
+  .status-danger {
+    @apply bg-danger/10 text-danger border border-danger/20;
+  }
+
+  .status-info {
+    @apply bg-info/10 text-info border border-info/20;
+  }
+
+  /* Text Effects - Minimal */
+  .text-glow {
+    text-shadow: 0 0 20px hsl(185 50% 45% / 0.3);
+  }
+
+  .text-glow-sm {
+    text-shadow: 0 0 10px hsl(185 50% 45% / 0.2);
+  }
+
+  .text-gradient-cyber {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(185 50% 50%) 0%, hsl(320 50% 55%) 100%);
+  }
+
+  /* Grid Pattern - Very Subtle */
+  .grid-pattern {
+    background-image: 
+      linear-gradient(hsl(185 50% 45% / 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(185 50% 45% / 0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* Scan Line Effect - Minimal */
+  .scanlines {
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      hsl(0 0% 0% / 0.015) 3px,
+      hsl(0 0% 0% / 0.015) 6px
+    );
+  }
+
+  /* Animations */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.4s ease-out forwards;
+  }
+
+  .animate-cyber-pulse {
+    animation: cyber-pulse 3s ease-in-out infinite;
+  }
+
+  .animate-border-flow {
+    animation: border-flow 3s linear infinite;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Keyframes - Subtle */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.97); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+@keyframes cyber-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(220 18% 9%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(220 15% 25%);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(220 15% 35%);
+}
+
+/* Focus Styles */
+*:focus-visible {
+  @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+}
+
+/* Selection */
+::selection {
+  background: hsl(185 50% 45% / 0.25);
+  color: hsl(210 20% 95%);
+}
