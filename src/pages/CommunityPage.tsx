@@ -4,6 +4,28 @@ import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { communityAPI } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Users,
   MessageSquare,
@@ -21,36 +43,10 @@ import {
   Star,
   Terminal,
   Zap,
-  Shield
+  Shield,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const mockReports = [
-  {
-    id: 1,
-    title: 'Fake news about bank closures',
-    description: 'Multiple WhatsApp groups sharing false information about government ordering bank closures.',
-    author: 'Anonymous User',
-    authorVerified: false,
-    votes: { up: 234, down: 12 },
-    comments: 45,
-    status: 'under_review',
-    submitted: '2 hours ago',
-    category: 'Financial',
-  },
-  {
-    id: 2,
-    title: 'Manipulated image of flood damage',
-    description: 'Photo claiming to show recent flood damage is actually from 2019 Bangladesh floods.',
-    author: 'Journalist Network Nepal',
-    authorVerified: true,
-    votes: { up: 567, down: 23 },
-    comments: 89,
-    status: 'verified_fake',
-    submitted: '5 hours ago',
-    category: 'Natural Disaster',
-  },
-];
 
 const getStatusConfig = (status: string) => {
   switch (status) {
@@ -66,7 +62,88 @@ const getStatusConfig = (status: string) => {
 };
 
 export default function CommunityPage() {
-  const [reports] = useState(mockReports);
+  const { tokens, user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState('latest');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
+  const [commentText, setCommentText] = useState('');
+  const [newReport, setNewReport] = useState({ title: '', description: '', category: 'General' });
+  const [applyData, setApplyData] = useState({ reason: '', experience: '' });
+
+  const { data: reportsData, isLoading } = useQuery({
+    queryKey: ['community-reports', activeTab, filterCategory],
+    queryFn: () => communityAPI.getReports(1, activeTab === 'latest' ? '-created_at' : '-votes_total'),
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: ({ id, content }: { id: number; content: string }) => 
+      communityAPI.addComment(tokens?.access || '', id, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-reports'] });
+      toast({ title: "Comment Posted", description: "Your comment has been added to the discussion." });
+      setCommentText('');
+      setSelectedReportId(null);
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Comment Failed", description: error.message || "Could not post comment." });
+    }
+  });
+
+  const applyMutation = useMutation({
+    mutationFn: (data: any) => communityAPI.applyForContributor(tokens?.access || '', data),
+    onSuccess: () => {
+      toast({ title: "Application Submitted", description: "We've received your application to become a contributor." });
+      setIsApplyModalOpen(false);
+      setApplyData({ reason: '', experience: '' });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Application Failed", description: error.message || "Could not submit application." });
+    }
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: (data: any) => communityAPI.createReport(tokens?.access || '', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-reports'] });
+      toast({ title: "Report Submitted", description: "Your report has been successfully submitted for community verification." });
+      setIsSubmitModalOpen(false);
+      setNewReport({ title: '', description: '', category: 'General' });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Submission Failed", description: error.message || "Could not submit your report. Please try again." });
+    }
+  });
+
+  const voteMutation = useMutation({
+    mutationFn: ({ id, voteType }: { id: number; voteType: 'up' | 'down' }) => 
+      communityAPI.voteOnReport(tokens?.access || '', id, voteType),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-reports'] });
+      toast({ title: "Vote Cast", description: "Your vote has been recorded." });
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "Voting Failed", description: error.message || "Could not record your vote." });
+    }
+  });
+
+  const reports = reportsData?.results || [];
+
+  const filteredReports = reports.filter((r: any) => 
+    filterCategory === 'all' || r.category === filterCategory
+  );
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast({ title: "Authentication Required", description: "Please log in to submit a report." });
+      return;
+    }
+    submitMutation.mutate(newReport);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -79,14 +156,82 @@ export default function CommunityPage() {
             <p className="text-muted-foreground mt-2">Crowdsourced truth verification by Nepal's citizens</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              Filter
-            </Button>
-            <Button className="bg-primary text-white">
-              <Plus className="h-4 w-4 mr-2" />
-              Submit Report
-            </Button>
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger className="w-[180px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter by Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="Financial">Financial</SelectItem>
+                <SelectItem value="Health">Health</SelectItem>
+                <SelectItem value="Political">Political</SelectItem>
+                <SelectItem value="Natural Disaster">Natural Disaster</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Dialog open={isSubmitModalOpen} onOpenChange={setIsSubmitModalOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary text-white">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Submit Report
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <form onSubmit={handleSubmit}>
+                  <DialogHeader>
+                    <DialogTitle>Submit New Report</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="title">Title</Label>
+                      <Input 
+                        id="title" 
+                        value={newReport.title}
+                        onChange={(e) => setNewReport({ ...newReport, title: e.target.value })}
+                        placeholder="What needs verifying?" 
+                        required 
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="category">Category</Label>
+                      <Select 
+                        value={newReport.category} 
+                        onValueChange={(val) => setNewReport({ ...newReport, category: val })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Financial">Financial</SelectItem>
+                          <SelectItem value="Health">Health</SelectItem>
+                          <SelectItem value="Political">Political</SelectItem>
+                          <SelectItem value="Natural Disaster">Natural Disaster</SelectItem>
+                          <SelectItem value="General">General</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea 
+                        id="description" 
+                        value={newReport.description}
+                        onChange={(e) => setNewReport({ ...newReport, description: e.target.value })}
+                        placeholder="Provide more details, context, or links..." 
+                        className="min-h-[100px]"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit" disabled={submitMutation.isPending}>
+                      {submitMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Submit for Verification
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -94,7 +239,7 @@ export default function CommunityPage() {
           <div className="lg:col-span-2">
             <div className="rounded-lg border border-border bg-card">
               <div className="border-b border-border p-4">
-                <Tabs defaultValue="latest">
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList>
                     <TabsTrigger value="latest">Latest</TabsTrigger>
                     <TabsTrigger value="trending">Trending</TabsTrigger>
@@ -104,54 +249,108 @@ export default function CommunityPage() {
               </div>
 
               <div className="divide-y divide-border">
-                {reports.map((report) => {
-                  const statusConfig = getStatusConfig(report.status);
-                  return (
-                    <div key={report.id} className="p-5 hover:bg-muted/50 transition">
-                      <div className="mb-3 flex flex-wrap items-center gap-2">
-                        <Badge className={cn(statusConfig.bg, statusConfig.text)}>
-                          {statusConfig.label}
-                        </Badge>
-                        <Badge variant="outline">{report.category}</Badge>
-                        <span className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {report.submitted}
-                        </span>
-                      </div>
-
-                      <h3 className="text-lg font-semibold text-foreground mb-2">
-                        {report.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        {report.description}
-                      </p>
-
-                      <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div className="flex items-center gap-2">
-                          {report.authorVerified && (
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          )}
-                          <span className="font-medium text-foreground/80">{report.author}</span>
+                {isLoading ? (
+                  <div className="p-8 text-center text-muted-foreground flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                    <p>Fetching community reports...</p>
+                  </div>
+                ) : filteredReports.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    No reports found for this filter.
+                  </div>
+                ) : (
+                  filteredReports.map((report: any) => {
+                    const statusConfig = getStatusConfig(report.status);
+                    return (
+                      <div key={report.id} className="p-5 hover:bg-muted/50 transition">
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                          <Badge className={cn(statusConfig.bg, statusConfig.text)}>
+                            {statusConfig.label}
+                          </Badge>
+                          <Badge variant="outline">{report.category}</Badge>
+                          <span className="text-sm text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {new Date(report.created_at).toLocaleDateString()}
+                          </span>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                          <Button variant="ghost" size="sm" className="gap-1">
-                            <ThumbsUp className="h-4 w-4" />
-                            {report.votes.up}
-                          </Button>
-                          <Button variant="ghost" size="sm" className="gap-1">
-                            <ThumbsDown className="h-4 w-4" />
-                            {report.votes.down}
-                          </Button>
-                          <Button variant="ghost" size="sm" className="gap-1">
-                            <MessageSquare className="h-4 w-4" />
-                            {report.comments}
-                          </Button>
+                        <h3 className="text-lg font-semibold text-foreground mb-2">
+                          {report.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          {report.description}
+                        </p>
+
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                          <div className="flex items-center gap-2">
+                            {report.author_verified && (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            )}
+                            <span className="font-medium text-foreground/80">{report.author_name || 'Anonymous'}</span>
+                          </div>
+
+                          <div className="flex items-center gap-4">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="gap-1 hover:text-green-600"
+                              onClick={() => voteMutation.mutate({ id: report.id, voteType: 'up' })}
+                              disabled={voteMutation.isPending}
+                            >
+                              <ThumbsUp className="h-4 w-4" />
+                              {report.upvotes || 0}
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="gap-1 hover:text-red-600"
+                              onClick={() => voteMutation.mutate({ id: report.id, voteType: 'down' })}
+                              disabled={voteMutation.isPending}
+                            >
+                              <ThumbsDown className="h-4 w-4" />
+                              {report.downvotes || 0}
+                            </Button>
+                            <Dialog open={selectedReportId === report.id} onOpenChange={(open) => !open && setSelectedReportId(null)}>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="gap-1"
+                                  onClick={() => setSelectedReportId(report.id)}
+                                >
+                                  <MessageSquare className="h-4 w-4" />
+                                  {report.comment_count || 0}
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Add a Comment</DialogTitle>
+                                </DialogHeader>
+                                <div className="py-4">
+                                  <Textarea 
+                                    placeholder="Share your insights or evidence..."
+                                    value={commentText}
+                                    onChange={(e) => setCommentText(e.target.value)}
+                                    className="min-h-[100px]"
+                                  />
+                                </div>
+                                <DialogFooter>
+                                  <Button 
+                                    onClick={() => commentMutation.mutate({ id: report.id, content: commentText })}
+                                    disabled={commentMutation.isPending || !commentText.trim()}
+                                  >
+                                    {commentMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Post Comment
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
 
               <div className="border-t border-border p-4">
@@ -187,9 +386,47 @@ export default function CommunityPage() {
               <p className="text-sm text-muted-foreground mb-4">
                 Join our network of trusted fact-checkers
               </p>
-              <Button className="w-full bg-primary text-white">
-                Apply Now
-              </Button>
+              <Dialog open={isApplyModalOpen} onOpenChange={setIsApplyModalOpen}>
+                <DialogTrigger asChild>
+                  <Button className="w-full bg-primary text-white">
+                    Apply Now
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Apply to be a Contributor</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label>Why do you want to join?</Label>
+                      <Textarea 
+                        placeholder="Tell us about your motivation..."
+                        value={applyData.reason}
+                        onChange={(e) => setApplyData({ ...applyData, reason: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Relevant Experience</Label>
+                      <Textarea 
+                        placeholder="Journalism, fact-checking, or domain expertise..."
+                        value={applyData.experience}
+                        onChange={(e) => setApplyData({ ...applyData, experience: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      onClick={() => applyMutation.mutate(applyData)}
+                      disabled={applyMutation.isPending || !applyData.reason.trim() || !applyData.experience.trim()}
+                    >
+                      {applyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Submit Application
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>

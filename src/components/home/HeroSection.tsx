@@ -28,10 +28,26 @@ const stats = [
   { value: "15+", label: "Languages", icon: MessageSquare },
 ];
 
+import { useLanguage } from "@/contexts/LanguageContext";
+
 export function HeroSection() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [selectedMethod, setSelectedMethod] = useState("upload");
   const [inputValue, setInputValue] = useState("");
+
+  const verificationMethods = [
+    { id: "upload", icon: Upload, label: t("hero.method.upload"), desc: t("hero.method.upload.desc") },
+    { id: "link", icon: LinkIcon, label: t("hero.method.link"), desc: t("hero.method.link.desc") },
+    { id: "text", icon: MessageSquare, label: t("hero.method.text"), desc: t("hero.method.text.desc") },
+  ];
+
+  const stats = [
+    { value: "2.5M+", label: t("hero.stats.scans"), icon: Scan },
+    { value: "98.7%", label: t("hero.stats.accuracy"), icon: Eye },
+    { value: "24/7", label: t("hero.stats.active"), icon: Zap },
+    { value: "15+", label: t("hero.stats.languages"), icon: MessageSquare },
+  ];
 
   const handleNavigateToVerify = () => {
     navigate("/verify", { 
@@ -61,20 +77,19 @@ export function HeroSection() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-primary/80" />
               </span>
-              <span className="text-sm font-medium text-primary/90">Nepal's Official Truth Verification Platform</span>
+              <span className="text-sm font-medium text-primary/90">{t("hero.badge")}</span>
             </div>
           </div>
 
           {/* Heading */}
           <div className="text-center animate-slide-up">
             <h1 className="mb-6 text-4xl font-bold tracking-tight md:text-6xl lg:text-7xl">
-              <span className="text-foreground">Defend Against</span>
+              <span className="text-foreground">{t("hero.title1")}</span>
               <br />
-              <span className="text-gradient-cyber">Digital Deception</span>
+              <span className="text-gradient-cyber">{t("hero.title2")}</span>
             </h1>
             <p className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground md:text-xl">
-              AI-powered detection of <span className="text-primary">deepfakes</span>, <span className="text-accent">fake news</span>, and manipulated content.
-              Verify anything in seconds — in Nepali, English, and local languages.
+              {t("hero.subtitle")}
             </p>
           </div>
 
@@ -108,10 +123,10 @@ export function HeroSection() {
                       <Upload className="h-7 w-7 text-primary/80" />
                     </div>
                     <p className="text-sm text-foreground">
-                      Drop file here or <span className="font-medium text-primary">browse</span>
+                      {t("hero.upload.title")}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground font-mono">
-                      Supports images, videos, audio up to 50MB
+                      {t("hero.upload.desc")}
                     </p>
                   </div>
                 ) : (
@@ -122,13 +137,13 @@ export function HeroSection() {
                       onChange={(e) => setInputValue(e.target.value)}
                       placeholder={
                         selectedMethod === "link"
-                          ? "Paste a URL to verify..."
-                          : "Paste text from WhatsApp, Facebook, etc..."
+                          ? t("hero.input.link")
+                          : t("hero.input.text")
                       }
                       className="flex-1 rounded-xl border border-border bg-muted/20 px-4 py-4 text-foreground placeholder-muted-foreground outline-none transition-all focus:border-primary/30 font-mono text-sm"
                     />
                     <Button size="lg" onClick={handleNavigateToVerify} className="px-6 bg-primary text-primary-foreground hover:bg-primary/90">
-                      Scan
+                      {t("hero.button.scan")}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
@@ -138,7 +153,7 @@ export function HeroSection() {
               {selectedMethod === "upload" && (
               <Button size="lg" onClick={handleNavigateToVerify} className="mt-2 w-full bg-primary text-primary-foreground hover:bg-primary/90">
                   <Scan className="mr-2 h-4 w-4" />
-                  Initialize Scan
+                  {t("hero.button.initialize")}
                 </Button>
               )}
             </div>
@@ -147,17 +162,17 @@ export function HeroSection() {
             <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-verified/80" />
-                Free to use
+                {t("hero.trust.free")}
               </span>
               <span className="hidden sm:inline text-border">|</span>
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-verified/80" />
-                No account required
+                {t("hero.trust.noaccount")}
               </span>
               <span className="hidden sm:inline text-border">|</span>
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-verified/80" />
-                Results in seconds
+                {t("hero.trust.results")}
               </span>
             </div>
           </div>

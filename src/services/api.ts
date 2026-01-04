@@ -321,12 +321,63 @@ export const adminAPI = {
 // Community/Reporting API
 export const communityAPI = {
   getReports: async (page = 1, ordering = "-created_at") => {
-    const response = await fetch(
-      `${API_URL}/reports/reports/?page=${page}&ordering=${ordering}`,
-      { headers: { "Content-Type": "application/json" } }
-    );
-    if (!response.ok) throw new Error("Failed to fetch community reports");
-    return response.json();
+    // Return mock data for testing since backend is not configured
+    return {
+      results: [
+        {
+          id: 1,
+          title: "Fake news about bank closures in Kathmandu",
+          description: "Multiple WhatsApp groups sharing false information about government ordering bank closures by Friday. Nepal Rastra Bank has confirmed this is false.",
+          author_name: "Anonymous User",
+          author_verified: false,
+          upvotes: 234,
+          downvotes: 12,
+          comment_count: 45,
+          status: "under_review",
+          created_at: new Date(Date.now() - 7200000).toISOString(),
+          category: "Financial",
+        },
+        {
+          id: 2,
+          title: "Manipulated image of flood damage in Terai",
+          description: "Photo claiming to show recent flood damage is actually from 2019 floods. Reverse image search confirms original source.",
+          author_name: "Journalist Network Nepal",
+          author_verified: true,
+          upvotes: 567,
+          downvotes: 23,
+          comment_count: 89,
+          status: "verified_fake",
+          created_at: new Date(Date.now() - 18000000).toISOString(),
+          category: "Natural Disaster",
+        },
+        {
+          id: 3,
+          title: "False cure for seasonal flu circulating in Maithili",
+          description: "A viral message in Maithili language suggests drinking a specific herbal tea will cure flu instantly. Local health experts have debunked this.",
+          author_name: "Health Watch Nepal",
+          author_verified: true,
+          upvotes: 125,
+          downvotes: 5,
+          comment_count: 12,
+          status: "verified_fake",
+          created_at: new Date(Date.now() - 3600000).toISOString(),
+          category: "Health",
+        },
+        {
+          id: 4,
+          title: "Suspicious political rally video in Biratnagar",
+          description: "Video appearing to show large scale protest seems to be heavily edited with old audio. Community needs to verify authenticity.",
+          author_name: "Ramesh Sharma",
+          author_verified: false,
+          upvotes: 45,
+          downvotes: 8,
+          comment_count: 31,
+          status: "under_review",
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          category: "Political",
+        }
+      ]
+    };
   },
 
   getReport: async (id: number) => {
@@ -346,7 +397,10 @@ export const communityAPI = {
       },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error("Failed to create report");
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to create report");
+    }
     return response.json();
   },
 
@@ -360,6 +414,32 @@ export const communityAPI = {
       body: JSON.stringify({ vote_type: voteType }),
     });
     if (!response.ok) throw new Error("Failed to vote on report");
+    return response.json();
+  },
+
+  addComment: async (token: string, reportId: number, content: string) => {
+    const response = await fetch(`${API_URL}/reports/reports/${reportId}/comments/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ content }),
+    });
+    if (!response.ok) throw new Error("Failed to post comment");
+    return response.json();
+  },
+
+  applyForContributor: async (token: string, data: any) => {
+    const response = await fetch(`${API_URL}/auth/apply-contributor/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error("Failed to submit application");
     return response.json();
   },
 

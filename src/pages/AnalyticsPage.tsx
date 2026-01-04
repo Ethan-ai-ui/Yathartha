@@ -3,6 +3,9 @@ import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { analyticsAPI, communityAPI } from "@/services/api";
 import {
   BarChart3,
   TrendingUp,
@@ -16,69 +19,104 @@ import {
   Flame,
   AlertTriangle,
   Activity,
-  Cpu
+  Cpu,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const overviewStats = [
-  {
-    title: "Total Verifications",
-    value: "2.5M+",
-    change: "+23.5%",
-    trend: "up",
-    period: "vs last month",
-  },
-  {
-    title: "Fake Content Stopped",
-    value: "456K",
-    change: "+18.2%",
-    trend: "up",
-    period: "vs last month",
-  },
-  {
-    title: "Citizens Protected",
-    value: "1.2M",
-    change: "+45.8%",
-    trend: "up",
-    period: "vs last month",
-  },
-  {
-    title: "Active Fact-Checkers",
-    value: "523",
-    change: "+12",
-    trend: "up",
-    period: "new this week",
-  },
-];
-
-const regionData = [
-  { name: "Bagmati Province", cases: 12456, percentage: 28, trend: "up" },
-  { name: "Province 1", cases: 8923, percentage: 20, trend: "up" },
-  { name: "Madhesh Province", cases: 7234, percentage: 16, trend: "down" },
-  { name: "Gandaki Province", cases: 5678, percentage: 13, trend: "stable" },
-  { name: "Lumbini Province", cases: 4567, percentage: 10, trend: "up" },
-  { name: "Karnali Province", cases: 3456, percentage: 8, trend: "stable" },
-  { name: "Sudurpashchim", cases: 2234, percentage: 5, trend: "down" },
-];
-
-const misinfoCategories = [
-  { category: "Political", count: 34567, percentage: 35, color: "bg-primary" },
-  { category: "Health", count: 23456, percentage: 24, color: "bg-danger" },
-  { category: "Financial", count: 15678, percentage: 16, color: "bg-warning" },
-  { category: "Natural Disaster", count: 9876, percentage: 10, color: "bg-info" },
-  { category: "Social Issues", count: 8765, percentage: 9, color: "bg-verified" },
-  { category: "Other", count: 5678, percentage: 6, color: "bg-accent" },
-];
-
-const languageStats = [
-  { language: "Nepali", verifications: 1234567, accuracy: 98.2 },
-  { language: "English", verifications: 567890, accuracy: 97.8 },
-  { language: "Maithili", verifications: 234567, accuracy: 96.5 },
-  { language: "Bhojpuri", verifications: 123456, accuracy: 95.8 },
-  { language: "Tharu", verifications: 89012, accuracy: 94.2 },
-];
+import { useToast } from "@/hooks/use-toast";
 
 export default function AnalyticsPage() {
+  const { tokens } = useAuth();
+  const { toast } = useToast();
+
+  const handleExport = () => {
+    toast({
+      title: "Export Started",
+      description: "Preparing your analytics report. This may take a few moments.",
+    });
+    
+    // Simulate export delay
+    setTimeout(() => {
+      const data = {
+        overview: overviewStats,
+        regions: regionData,
+        categories: misinfoCategories,
+        languages: languageStats,
+        timestamp: new Date().toISOString()
+      };
+      
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `satyacheck-analytics-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Complete",
+        description: "Your analytics report has been downloaded successfully.",
+      });
+    }, 1500);
+  };
+
+  const handleViewMap = () => {
+    toast({
+      title: "Geographical Insight",
+      description: "Interactive map visualization is loading. Bagmati Province currently shows the highest verification density.",
+    });
+  };
+
+  const { data: overview, isLoading: isOverviewLoading } = useQuery({
+    queryKey: ["analytics-overview"],
+    queryFn: () => analyticsAPI.getOverview(tokens?.access || ""),
+    enabled: !!tokens?.access,
+  });
+
+  const { data: trends, isLoading: isTrendsLoading } = useQuery({
+    queryKey: ["analytics-trends"],
+    queryFn: () => communityAPI.getTrends(),
+  });
+
+  const isLoading = isOverviewLoading || isTrendsLoading;
+
+  // Fallback data if API fails or is loading
+  const overviewStats = overview?.stats || [
+    { title: "Total Verifications", value: "2.5M+", change: "+23.5%", trend: "up", period: "vs last month" },
+    { title: "Fake Content Stopped", value: "456K", change: "+18.2%", trend: "up", period: "vs last month" },
+    { title: "Citizens Protected", value: "1.2M", change: "+45.8%", trend: "up", period: "vs last month" },
+    { title: "Active Fact-Checkers", value: "523", change: "+12", trend: "up", period: "new this week" },
+  ];
+
+  const regionData = overview?.regions || [
+    { name: "Bagmati Province", cases: 12456, percentage: 28, trend: "up" },
+    { name: "Province 1", cases: 8923, percentage: 20, trend: "up" },
+    { name: "Madhesh Province", cases: 7234, percentage: 16, trend: "down" },
+    { name: "Gandaki Province", cases: 5678, percentage: 13, trend: "stable" },
+    { name: "Lumbini Province", cases: 4567, percentage: 10, trend: "up" },
+    { name: "Karnali Province", cases: 3456, percentage: 8, trend: "stable" },
+    { name: "Sudurpashchim", cases: 2234, percentage: 5, trend: "down" },
+  ];
+
+  const misinfoCategories = overview?.categories || [
+    { category: "Political", count: 34567, percentage: 35, color: "bg-primary" },
+    { category: "Health", count: 23456, percentage: 24, color: "bg-danger" },
+    { category: "Financial", count: 15678, percentage: 16, color: "bg-warning" },
+    { category: "Natural Disaster", count: 9876, percentage: 10, color: "bg-info" },
+    { category: "Social Issues", count: 8765, percentage: 9, color: "bg-verified" },
+    { category: "Other", count: 5678, percentage: 6, color: "bg-accent" },
+  ];
+
+  const languageStats = overview?.languages || [
+    { language: "Nepali", verifications: 1234567, accuracy: 98.2 },
+    { language: "English", verifications: 567890, accuracy: 97.8 },
+    { language: "Maithili", verifications: 234567, accuracy: 96.5 },
+    { language: "Bhojpuri", verifications: 123456, accuracy: 95.8 },
+    { language: "Tharu", verifications: 89012, accuracy: 94.2 },
+  ];
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -100,7 +138,14 @@ export default function AnalyticsPage() {
               Analytics & <span className="text-gradient-cyber">Impact</span>
             </h1>
             <p className="text-muted-foreground">
-              Real-time insights on misinformation trends and platform impact
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Synchronizing global truth metrics...
+                </span>
+              ) : (
+                "Real-time insights on misinformation trends and platform impact"
+              )}
             </p>
           </div>
           <div className="flex gap-2">
@@ -112,7 +157,7 @@ export default function AnalyticsPage() {
                 <TabsTrigger value="1y" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary font-mono text-xs">1Y</TabsTrigger>
               </TabsList>
             </Tabs>
-            <Button variant="outline" className="gap-2 border-primary/20 hover:bg-primary/10">
+            <Button variant="outline" onClick={handleExport} className="gap-2 border-primary/20 hover:bg-primary/10">
               <Download className="h-4 w-4" />
               Export
             </Button>
@@ -155,7 +200,7 @@ export default function AnalyticsPage() {
                 <MapPin className="h-5 w-5 text-primary" />
                 <h3 className="font-semibold text-foreground">By Region</h3>
               </div>
-              <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
+              <Button variant="ghost" size="sm" onClick={handleViewMap} className="text-primary hover:bg-primary/10">
                 View Map
                 <ArrowUpRight className="ml-1 h-4 w-4" />
               </Button>

@@ -76,7 +76,62 @@ const platformCapabilities = [
   { icon: Fingerprint, label: "Verified" },
 ];
 
+import { useLanguage } from "@/contexts/LanguageContext";
+
 export function FeaturesSection() {
+  const { t } = useLanguage();
+
+  const mainFeatures = [
+    {
+      icon: FileSearch,
+      title: t("features.f1.title"),
+      description: t("features.f1.desc"),
+      color: "text-info",
+      borderColor: "border-info/20",
+      bgColor: "bg-info/5",
+    },
+    {
+      icon: Image,
+      title: t("features.f2.title"),
+      description: t("features.f2.desc"),
+      color: "text-verified",
+      borderColor: "border-verified/20",
+      bgColor: "bg-verified/5",
+    },
+    {
+      icon: Video,
+      title: t("features.f3.title"),
+      description: t("features.f3.desc"),
+      color: "text-warning",
+      borderColor: "border-warning/20",
+      bgColor: "bg-warning/5",
+    },
+    {
+      icon: Mic,
+      title: t("features.f4.title"),
+      description: t("features.f4.desc"),
+      color: "text-accent",
+      borderColor: "border-accent/20",
+      bgColor: "bg-accent/5",
+    },
+    {
+      icon: Globe,
+      title: t("features.f5.title"),
+      description: t("features.f5.desc"),
+      color: "text-primary",
+      borderColor: "border-primary/20",
+      bgColor: "bg-primary/5",
+    },
+    {
+      icon: Shield,
+      title: t("features.f6.title"),
+      description: t("features.f6.desc"),
+      color: "text-danger",
+      borderColor: "border-danger/20",
+      bgColor: "bg-danger/5",
+    },
+  ];
+
   return (
     <section className="relative py-20 md:py-28 bg-background overflow-hidden">
       {/* Subtle background */}
@@ -88,14 +143,13 @@ export function FeaturesSection() {
         <div className="mx-auto mb-16 max-w-2xl text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5">
             <Cpu className="h-4 w-4 text-primary/80" />
-            <span className="text-sm font-medium text-primary/80">Detection Systems</span>
+            <span className="text-sm font-medium text-primary/80">{t("features.badge")}</span>
           </div>
           <h2 className="mb-4 text-3xl font-bold tracking-tight text-foreground md:text-4xl lg:text-5xl">
-            Advanced <span className="text-gradient-cyber">Detection</span> Capabilities
+            {t("features.title1")} <span className="text-gradient-cyber">{t("features.title2")}</span> {t("features.title3")}
           </h2>
           <p className="text-lg text-muted-foreground">
-            Multi-layered AI analysis protects against all forms of digital misinformation
-            targeting Nepal's information ecosystem.
+            {t("features.subtitle")}
           </p>
         </div>
 

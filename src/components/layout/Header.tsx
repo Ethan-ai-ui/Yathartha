@@ -22,30 +22,33 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AuthModal } from "@/components/AuthModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const navigation = [
-  { name: "Verify", href: "/verify", icon: FileSearch },
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Community", href: "/community", icon: Users },
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
+  { name: "nav.verify", href: "/verify", icon: FileSearch },
+  { name: "nav.dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "nav.community", href: "/community", icon: Users },
+  { name: "nav.analytics", href: "/analytics", icon: BarChart3 },
 ];
 
 const languages = [
   { code: "ne", name: "नेपाली", flag: "🇳🇵" },
   { code: "en", name: "English", flag: "🇬🇧" },
   { code: "mai", name: "मैथिली", flag: "🇳🇵" },
-];
+] as const;
 
 export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [currentLang, setCurrentLang] = useState(languages[0]);
+  const { language, setLanguage, t } = useLanguage();
   const [authModal, setAuthModal] = useState<{ isOpen: boolean; mode: "login" | "signup" }>({
     isOpen: false,
     mode: "login",
   });
   const { user, logout } = useAuth();
+
+  const currentLang = languages.find(l => l.code === language) || languages[1];
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -85,7 +88,7 @@ export function Header() {
                 }`}
               >
                 <item.icon className="h-4 w-4" />
-                {item.name}
+                {t(item.name)}
               </Button>
             </Link>
           ))}
@@ -115,7 +118,7 @@ export function Header() {
               {languages.map((lang) => (
                 <DropdownMenuItem
                   key={lang.code}
-                  onClick={() => setCurrentLang(lang)}
+                  onClick={() => setLanguage(lang.code as any)}
                   className="gap-2 focus:bg-primary/10 focus:text-primary"
                 >
                   <span>{lang.flag}</span>
