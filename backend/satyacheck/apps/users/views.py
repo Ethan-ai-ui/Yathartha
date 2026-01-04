@@ -11,6 +11,8 @@ from django.utils import timezone
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
+from django.views.decorators.http import require_http_methods
+from django.http import JsonResponse
 import random
 import string
 import logging
@@ -44,45 +46,48 @@ class AuthViewSet(viewsets.ViewSet):
         Register a new user.
         POST: /api/v1/auth/signup/
         """
-        serializer = SignupSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            
-            # Log signup activity
-            audit_logger.info(f"New user signup: {user.username} ({user.email})")
-            
-            # Log activity
-            UserActivity.objects.create(
-                user=user,
-                activity_type='signup',
-                description='User registered',
-                ip_address=self._get_client_ip(request),
-                user_agent=request.META.get('HTTP_USER_AGENT', '')
-            )
-            
-            # Generate tokens
-            refresh = RefreshToken.for_user(user)
-            
-            return Response(
-                {
-                    'success': True,
-                    'message': 'User registered successfully.',
-                    'user': UserSerializer(user).data,
-                    'tokens': {
+        import traceback
+        try:
+            serializer = SignupSerializer(data=request.data)
+            if serializer.is_valid():
+                user = serializer.save()
+                
+                # Log signup activity
+                audit_logger.info(f"New user signup: {user.username} ({user.email})")
+                
+                # Log activity
+                UserActivity.objects.create(
+                    user=user,
+                    activity_type='signup',
+                    description='User registered',
+                    ip_address=self._get_client_ip(request),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')
+                )
+                
+                # Generate tokens
+                refresh = RefreshToken.for_user(user)
+                
+                return Response(
+                    {
                         'access': str(refresh.access_token),
                         'refresh': str(refresh),
-                    }
-                },
-                status=status.HTTP_201_CREATED
+                        'user': UserSerializer(user).data,
+                    },
+                    status=status.HTTP_201_CREATED
+                )
+            
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
             )
-        
-        return Response(
-            {
-                'success': False,
-                'errors': serializer.errors
-            },
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        except Exception as e:
+            error_msg = f"Signup error: {str(e)}\n{traceback.format_exc()}"
+            audit_logger.error(error_msg)
+            print(error_msg)
+            return Response(
+                {'error': str(e), 'detail': error_msg},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=False, methods=['post'], permission_classes=[AllowAny()])
     def login(self, request):
@@ -115,13 +120,9 @@ class AuthViewSet(viewsets.ViewSet):
             
             return Response(
                 {
-                    'success': True,
-                    'message': 'Login successful.',
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
                     'user': UserSerializer(user).data,
-                    'tokens': {
-                        'access': str(refresh.access_token),
-                        'refresh': str(refresh),
-                    }
                 },
                 status=status.HTTP_200_OK
             )

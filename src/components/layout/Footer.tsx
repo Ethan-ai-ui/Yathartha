@@ -15,16 +15,17 @@ const footerLinks = {
     { name: "Research", href: "/research" },
   ],
   legal: [
+    { name: "Legal", href: "/legal" },
     { name: "Privacy Policy", href: "/privacy" },
     { name: "Terms of Service", href: "/terms" },
     { name: "Data Protection", href: "/data" },
     { name: "AI Transparency", href: "/transparency" },
   ],
   partners: [
-    { name: "Government Portal", href: "#", external: true },
-    { name: "Election Commission", href: "#", external: true },
-    { name: "Media Council", href: "#", external: true },
-    { name: "NGO Partners", href: "/partners" },
+    { name: "Government Portal", href: "https://govnp.com/", external: true },
+    { name: "Election Commission", href: "https://election.gov.np/", external: true },
+    { name: "Media Council", href: "https://mocit.gov.np/", external: true },
+    { name: "NGO Partners", href: "https://prithakkoirala.com.np", external: true },
   ],
 };
 
@@ -60,11 +61,11 @@ export function Footer() {
             <div className="mt-6 space-y-2 text-sm text-muted-foreground font-mono">
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-primary/60" />
-                <span>contact@satyacheck.gov.np</span>
+                <span>prithakkoirala44@gmail.com</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-primary/60" />
-                <span>+977-1-4XXXXXX</span>
+                <span>+977-9869836924</span>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-primary/60" />
@@ -74,10 +75,10 @@ export function Footer() {
 
             {/* Social Links */}
             <div className="mt-6 flex gap-3">
-              <a href="#" className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 text-muted-foreground transition-all hover:border-primary/40 hover:text-primary hover:shadow-neon">
+              <a href="https://x.com/koirala_prithak" className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 text-muted-foreground transition-all hover:border-primary/40 hover:text-primary hover:shadow-neon">
                 <Twitter className="h-4 w-4" />
               </a>
-              <a href="#" className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 text-muted-foreground transition-all hover:border-primary/40 hover:text-primary hover:shadow-neon">
+              <a href="https://github.com/pp-beb" className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 text-muted-foreground transition-all hover:border-primary/40 hover:text-primary hover:shadow-neon">
                 <Github className="h-4 w-4" />
               </a>
             </div>
@@ -156,7 +157,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-primary/10 pt-8 md:flex-row">
           <p className="text-sm text-muted-foreground font-mono">
-            © 2026 SatyaCheck. <span className="text-primary/60">Digital Public Infrastructure</span>
+            © 2026 Prithak. <span className="text-primary/60">Digital Public Infrastructure</span>
           </p>
           <div className="flex items-center gap-4">
             <span className="text-xs text-muted-foreground">Powered by</span>

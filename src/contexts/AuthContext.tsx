@@ -7,7 +7,7 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (username: string, email: string, password: string, role: string) => Promise<void>;
+  signup: (username: string, email: string, password: string, password_confirm: string, role: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: any) => Promise<void>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
@@ -64,6 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     username: string,
     email: string,
     password: string,
+    password_confirm: string,
     role: string
   ) => {
     setIsLoading(true);
@@ -73,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         username,
         email,
         password,
+        password_confirm,
         role: role as "citizen" | "journalist" | "ngo" | "admin",
       });
       setTokens({ access: response.access, refresh: response.refresh });

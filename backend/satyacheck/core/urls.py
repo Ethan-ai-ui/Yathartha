@@ -25,7 +25,7 @@ urlpatterns = [
     # App URLs
     path('api/v1/auth/', include('satyacheck.apps.users.urls')),
     path('api/v1/submissions/', include('satyacheck.apps.submissions.urls')),
-    path('api/v1/ai/', include('satyacheck.apps.ai.urls')),
+    # path('api/v1/ai/', include('satyacheck.apps.ai.urls')),  # Requires PyTorch
     path('api/v1/admin/', include('satyacheck.apps.admin_panel.urls')),
     path('api/v1/reports/', include('satyacheck.apps.reporting.urls')),
 ]

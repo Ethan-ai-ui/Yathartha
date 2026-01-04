@@ -7,6 +7,7 @@ import logging
 import json
 from django.utils.deprecation import MiddlewareMixin
 from django.contrib.auth.models import AnonymousUser
+from django.conf import settings
 
 logger = logging.getLogger('satyacheck')
 audit_logger = logging.getLogger('satyacheck.audit')
@@ -67,5 +68,24 @@ class SecurityHeadersMiddleware(MiddlewareMixin):
         response['X-XSS-Protection'] = '1; mode=block'
         response['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
         response['Content-Security-Policy'] = "default-src 'self'"
+        
+        return response
+
+
+class CORSMiddleware(MiddlewareMixin):
+    """
+    Custom CORS middleware to handle CORS headers.
+    """
+    
+    def process_response(self, request, response):
+        """Add CORS headers to response."""
+        origin = request.META.get('HTTP_ORIGIN', '')
+        allowed_origins = settings.CORS_ALLOWED_ORIGINS
+        
+        if origin in allowed_origins or '*' in allowed_origins:
+            response['Access-Control-Allow-Origin'] = origin if origin else '*'
+            response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+            response['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+            response['Access-Control-Allow-Credentials'] = 'true'
         
         return response

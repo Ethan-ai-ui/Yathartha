@@ -39,37 +39,30 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.is_moderator()
 
 
-class SignupSerializer(serializers.ModelSerializer):
+class SignupSerializer(serializers.Serializer):
     """
     Serializer for user registration.
     Validates password strength and creates new user.
     """
     
+    username = serializers.CharField(required=True)
+    email = serializers.EmailField(required=True)
     password = serializers.CharField(
         write_only=True,
         required=True,
-        validators=[validate_password],
-        style={'input_type': 'password'}
+        validators=[validate_password]
     )
     password_confirm = serializers.CharField(
         write_only=True,
-        required=True,
-        style={'input_type': 'password'}
+        required=True
     )
-    email = serializers.EmailField(required=True)
-    
-    class Meta:
-        model = User
-        fields = [
-            'username', 'email', 'password', 'password_confirm',
-            'first_name', 'last_name', 'role', 'organization'
-        ]
+    role = serializers.CharField(required=False, default='citizen')
     
     def validate(self, data):
         """Validate passwords match."""
         if data['password'] != data.pop('password_confirm'):
             raise serializers.ValidationError(
-                {'password': 'Passwords do not match.'}
+                'Passwords do not match.'
             )
         return data
     
@@ -92,7 +85,15 @@ class SignupSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create new user with hashed password."""
         password = validated_data.pop('password')
-        user = User.objects.create_user(**validated_data)
+        username = validated_data.get('username')
+        email = validated_data.get('email')
+        role = validated_data.get('role', 'citizen')
+        
+        user = User(
+            username=username,
+            email=email,
+            role=role
+        )
         user.set_password(password)
         user.save()
         return user

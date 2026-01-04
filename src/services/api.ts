@@ -17,6 +17,7 @@ export interface SignupData {
   username: string;
   email: string;
   password: string;
+  password_confirm: string;
   role: "citizen" | "journalist" | "ngo" | "admin";
 }
 
@@ -41,7 +42,17 @@ export const authAPI = {
     });
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || "Signup failed");
+      // Handle field-specific validation errors
+      if (typeof error === 'object' && !error.detail) {
+        const errorMessages = Object.entries(error)
+          .map(([field, messages]) => {
+            const msg = Array.isArray(messages) ? messages.join(', ') : messages;
+            return `${field}: ${msg}`;
+          })
+          .join('; ');
+        throw new Error(errorMessages || "Signup failed");
+      }
+      throw new Error(error.detail || error.message || "Signup failed");
     }
     return response.json();
   },
@@ -209,7 +220,7 @@ export const submissionsAPI = {
 // Analytics API
 export const analyticsAPI = {
   getOverview: async (token: string) => {
-    const response = await fetch(`${API_URL}/reports/overview/`, {
+    const response = await fetch(`${API_URL}/reports/analytics/overview/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!response.ok) throw new Error("Failed to fetch overview");
@@ -307,4 +318,74 @@ export const adminAPI = {
   },
 };
 
-export default { authAPI, submissionsAPI, analyticsAPI, adminAPI };
+// Community/Reporting API
+export const communityAPI = {
+  getReports: async (page = 1, ordering = "-created_at") => {
+    const response = await fetch(
+      `${API_URL}/reports/reports/?page=${page}&ordering=${ordering}`,
+      { headers: { "Content-Type": "application/json" } }
+    );
+    if (!response.ok) throw new Error("Failed to fetch community reports");
+    return response.json();
+  },
+
+  getReport: async (id: number) => {
+    const response = await fetch(`${API_URL}/reports/reports/${id}/`, {
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!response.ok) throw new Error("Failed to fetch report");
+    return response.json();
+  },
+
+  createReport: async (token: string, data: any) => {
+    const response = await fetch(`${API_URL}/reports/reports/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error("Failed to create report");
+    return response.json();
+  },
+
+  voteOnReport: async (token: string, id: number, voteType: "up" | "down") => {
+    const response = await fetch(`${API_URL}/reports/reports/${id}/vote/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ vote_type: voteType }),
+    });
+    if (!response.ok) throw new Error("Failed to vote on report");
+    return response.json();
+  },
+
+  getTrends: async () => {
+    const response = await fetch(`${API_URL}/reports/trends/`, {
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!response.ok) throw new Error("Failed to fetch trends");
+    return response.json();
+  },
+
+  getAnalytics: async (token: string) => {
+    const response = await fetch(`${API_URL}/reports/analytics/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error("Failed to fetch analytics");
+    return response.json();
+  },
+
+  getTopContributors: async () => {
+    const response = await fetch(`${API_URL}/reports/reports/?ordering=-contributor_reports`, {
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!response.ok) throw new Error("Failed to fetch top contributors");
+    return response.json();
+  },
+};
+
+export default { authAPI, submissionsAPI, analyticsAPI, adminAPI, communityAPI };

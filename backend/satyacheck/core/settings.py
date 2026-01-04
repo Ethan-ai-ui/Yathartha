@@ -20,20 +20,21 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv(
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173',
+    default='http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:8081,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:8080,http://127.0.0.1:8081',
     cast=Csv()
 )
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Application Definition
 INSTALLED_APPS = [
-    'daphne',  # ASGI server for WebSockets
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',
     
     # Third-party apps
     'rest_framework',
@@ -44,7 +45,7 @@ INSTALLED_APPS = [
     # SatyaCheck apps
     'satyacheck.apps.users',
     'satyacheck.apps.submissions',
-    'satyacheck.apps.ai',
+    # 'satyacheck.apps.ai',  # Requires PyTorch
     'satyacheck.apps.admin_panel',
     'satyacheck.apps.reporting',
     'satyacheck.apps.common',
@@ -52,7 +53,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    # 'whitenoise.middleware.WhiteNoiseMiddleware',  # Disabled for development
+    'satyacheck.core.middleware.CORSMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -83,17 +85,11 @@ TEMPLATES = [
 WSGI_APPLICATION = 'satyacheck.core.wsgi.application'
 ASGI_APPLICATION = 'satyacheck.core.asgi.application'
 
-# Database Configuration - PostgreSQL
+# Database Configuration - SQLite (for testing), can switch to PostgreSQL
 DATABASES = {
     'default': {
-        'ENGINE': config('DB_ENGINE', default='django.db.backends.postgresql'),
-        'NAME': config('DB_NAME', default='satyacheck'),
-        'USER': config('DB_USER', default='postgres'),
-        'PASSWORD': config('DB_PASSWORD', default='postgres'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
-        'ATOMIC_REQUESTS': True,  # Wrap views in transactions
-        'CONN_MAX_AGE': 600,
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -125,7 +121,7 @@ USE_TZ = True
 # Static files and media
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'  # Disabled for development
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -137,6 +133,9 @@ ALLOWED_FILE_TYPES = config('ALLOWED_FILE_TYPES', default='jpg,jpeg,png,gif,mp4,
 
 # Default Primary Key Field Type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Custom User Model
+AUTH_USER_MODEL = 'users.User'
 
 # REST Framework Configuration
 REST_FRAMEWORK = {
@@ -201,11 +200,8 @@ REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
 # Caching
 CACHES = {
     'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': REDIS_URL,
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'satyacheck-cache',
     }
 }
 

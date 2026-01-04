@@ -2,6 +2,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,14 +27,21 @@ export function AuthModal({ isOpen, onClose, mode: initialMode }: AuthModalProps
     username: "",
     email: "",
     password: "",
-    confirmPassword: "",
+    password_confirm: "",
     role: "citizen",
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleRoleChange = (value: string) => {
+    setFormData({
+      ...formData,
+      role: value,
     });
   };
 
@@ -42,7 +56,7 @@ export function AuthModal({ isOpen, onClose, mode: initialMode }: AuthModalProps
           description: "Logged in successfully!",
         });
       } else {
-        if (formData.password !== formData.confirmPassword) {
+        if (formData.password !== formData.password_confirm) {
           toast({
             title: "Error",
             description: "Passwords do not match",
@@ -54,6 +68,7 @@ export function AuthModal({ isOpen, onClose, mode: initialMode }: AuthModalProps
           formData.username,
           formData.email,
           formData.password,
+          formData.password_confirm,
           formData.role
         );
         toast({
@@ -66,7 +81,7 @@ export function AuthModal({ isOpen, onClose, mode: initialMode }: AuthModalProps
         username: "",
         email: "",
         password: "",
-        confirmPassword: "",
+        password_confirm: "",
         role: "citizen",
       });
     } catch (err) {
@@ -126,22 +141,22 @@ export function AuthModal({ isOpen, onClose, mode: initialMode }: AuthModalProps
               <Input
                 type="password"
                 placeholder="Confirm Password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
+                name="password_confirm"
+                value={formData.password_confirm}
                 onChange={handleChange}
                 required
               />
 
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              >
-                <option value="citizen">Citizen</option>
-                <option value="journalist">Journalist</option>
-                <option value="ngo">NGO</option>
-              </select>
+              <Select value={formData.role} onValueChange={handleRoleChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select your role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="citizen">Citizen</SelectItem>
+                  <SelectItem value="journalist">Journalist</SelectItem>
+                  <SelectItem value="ngo">NGO</SelectItem>
+                </SelectContent>
+              </Select>
             </>
           )}
 

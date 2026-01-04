@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   Shield, 
@@ -28,8 +29,18 @@ const stats = [
 ];
 
 export function HeroSection() {
+  const navigate = useNavigate();
   const [selectedMethod, setSelectedMethod] = useState("upload");
   const [inputValue, setInputValue] = useState("");
+
+  const handleNavigateToVerify = () => {
+    navigate("/verify", { 
+      state: { 
+        contentType: selectedMethod, 
+        initialValue: inputValue 
+      } 
+    });
+  };
 
   return (
     <section className="relative min-h-[90vh] overflow-hidden bg-background">
@@ -116,7 +127,7 @@ export function HeroSection() {
                       }
                       className="flex-1 rounded-xl border border-border bg-muted/20 px-4 py-4 text-foreground placeholder-muted-foreground outline-none transition-all focus:border-primary/30 font-mono text-sm"
                     />
-                    <Button size="lg" className="px-6 bg-primary text-primary-foreground hover:bg-primary/90">
+                    <Button size="lg" onClick={handleNavigateToVerify} className="px-6 bg-primary text-primary-foreground hover:bg-primary/90">
                       Scan
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
@@ -125,7 +136,7 @@ export function HeroSection() {
               </div>
 
               {selectedMethod === "upload" && (
-                <Button size="lg" className="mt-2 w-full bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button size="lg" onClick={handleNavigateToVerify} className="mt-2 w-full bg-primary text-primary-foreground hover:bg-primary/90">
                   <Scan className="mr-2 h-4 w-4" />
                   Initialize Scan
                 </Button>
