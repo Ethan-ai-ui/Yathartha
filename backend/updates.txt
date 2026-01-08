@@ -1,0 +1,6 @@
+2026-01-08  - Initial production-grade AI fake news detection system scaffolded in backend/satyacheck/ai_fake_news/ (modular pipeline, models, async tasks, explainability, data/eval strategy).
+2026-01-08  - requirements.txt updated with all backend, AI/ML, and NLP dependencies.
+2026-01-08  - .gitignore created for Python, Django, Celery, and frontend artifacts.
+2026-01-08  - UPGRADE_LOG_2026-01-08.txt created to document today's major backend upgrades.
+2026-01-08  - Verified and documented backend/frontend API integration for dynamic results.
+2026-01-08  - Prepared backend for real async AI analysis and explainable results.

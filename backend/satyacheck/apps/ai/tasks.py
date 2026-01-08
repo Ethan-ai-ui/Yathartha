@@ -9,6 +9,7 @@ import logging
 
 from satyacheck.apps.submissions.models import Submission, VerificationResult, ScrapedContent
 from satyacheck.services.ai_service import get_model
+from satyacheck.ai_fake_news.pipeline import detect_fake_news
 from satyacheck.services.web_scraper import WebScraper, find_similar_articles
 
 logger = logging.getLogger('satyacheck.ai')
@@ -29,17 +30,27 @@ def analyze_submission(submission_id):
         submission.status = 'analyzing'
         submission.save(update_fields=['status'])
         
-        # Get AI model
-        model = get_model()
-        
-        # Perform analysis based on type
+        # Use ai_fake_news pipeline for text submissions
         if submission.submission_type == 'text':
-            result = model.analyze_text(submission.text_content, submission.language)
+            # Use modular pipeline for explainable, robust results
+            pipeline_result = detect_fake_news(submission.text_content, {'language': submission.language, 'user_id': str(submission.user_id)})
+            result = {
+                'score': int(pipeline_result.confidence * 100),
+                'confidence': pipeline_result.confidence,
+                'category': pipeline_result.label.value,
+                'explanation': '\n'.join(pipeline_result.explainability.reasons),
+                'explanation_nepali': '',
+                'explanation_hindi': '',
+                'component_scores': pipeline_result.explainability.signals,
+            }
         elif submission.submission_type == 'image':
+            model = get_model()
             result = model.analyze_image(submission.file.path)
         elif submission.submission_type == 'video':
+            model = get_model()
             result = model.analyze_video(submission.file.path)
         elif submission.submission_type == 'audio':
+            model = get_model()
             result = model.analyze_audio(submission.file.path)
         elif submission.submission_type == 'link':
             # Scrape and analyze
@@ -47,7 +58,6 @@ def analyze_submission(submission_id):
         else:
             logger.error(f"Unknown submission type: {submission.submission_type}")
             return
-        
         # Create verification result
         verification = VerificationResult.objects.create(
             submission=submission,
@@ -57,7 +67,7 @@ def analyze_submission(submission_id):
             explanation=result['explanation'],
             explanation_nepali=result.get('explanation_nepali', ''),
             explanation_hindi=result.get('explanation_hindi', ''),
-            model_used='distilbert-base-uncased',
+            model_used='ai_fake_news_pipeline',
             model_version='1.0',
             text_analysis_score=result.get('component_scores', {}).get('sentiment'),
         )

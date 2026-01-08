@@ -1,0 +1,7 @@
+Upgrades and changes committed on 2026-01-08:
+
+- Added production-grade AI fake news detection system skeleton in backend/satyacheck/ai_fake_news/ with modular layers (ingestion, preprocessing, features, reasoning, decision, models, pipeline, tasks, data strategy, evaluation).
+- Updated requirements.txt to include all backend, AI/ML, and NLP dependencies (celery, redis, scikit-learn, transformers, torch, nltk, spacy, langdetect, etc).
+- Created .gitignore for Python, Django, Celery, and frontend artifacts.
+- Verified and documented backend/frontend API integration for dynamic results.
+- Prepared backend for real async AI analysis and explainable results.

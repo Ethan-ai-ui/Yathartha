@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Backend Bootstrap",
+			"type": "shell",
+			"command": "python backend/scripts/bootstrap.py",
+			"args": [],
+			"group": "build"
+		}
+	]
+}
