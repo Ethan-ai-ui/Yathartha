@@ -1,315 +1,499 @@
-import { useState } from "react";
-import { Navigate } from "react-router-dom";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Upload, 
-  Link as LinkIcon, 
-  MessageSquare, 
-  Loader2,
-  AlertTriangle,
-  CheckCircle2,
-  Share2,
-  Flag,
-} from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { submissionsAPI } from "@/services/api";
-import { useToast } from "@/hooks/use-toast";
+// import { useState } from "react";
+// import { Header } from "@/components/layout/Header";
+// import { Footer } from "@/components/layout/Footer";
+// import { Button } from "@/components/ui/button";
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+// import { 
+//   Upload, 
+//   Link as LinkIcon, 
+//   MessageSquare, 
+//   Mic,
+//   FileImage,
+//   FileVideo,
+//   FileAudio,
+//   X,
+//   Loader2,
+//   AlertTriangle,
+//   CheckCircle2,
+//   HelpCircle,
+//   Share2,
+//   Flag,
+//   ExternalLink,
+//   Info,
+//   Scan,
+//   Shield,
+//   Brain,
+//   Zap
+// } from "lucide-react";
+// import { cn } from "@/lib/utils";
+// import { Progress } from "@/components/ui/progress";
 
-type ContentType = "text" | "image" | "video" | "audio" | "link";
+// type VerificationStatus = "idle" | "uploading" | "analyzing" | "complete";
+// type VerdictType = "verified" | "suspicious" | "fake" | "uncertain";
 
-export default function VerifyPage() {
-  const { user, tokens } = useAuth();
-  const { toast } = useToast();
-  const [contentType, setContentType] = useState<ContentType>("text");
-  const [content, setContent] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [language, setLanguage] = useState<"en" | "ne" | "hi">("en");
-  const [isLoading, setIsLoading] = useState(false);
-  const [results, setResults] = useState<any>(null);
+// interface VerificationResult {
+//   verdict: VerdictType;
+//   fakeScore: number;
+//   deepfakeScore: number;
+//   manipulationIndicators: string[];
+//   explanation: string;
+//   explanationNepali: string;
+//   sources: { title: string; url: string; credibility: string }[];
+// }
 
-  if (!user || !tokens) {
-    return <Navigate to="/" />;
-  }
+// const mockResult: VerificationResult = {
+//   verdict: "suspicious",
+//   fakeScore: 73,
+//   deepfakeScore: 45,
+//   manipulationIndicators: [
+//     "Image metadata inconsistencies detected",
+//     "Facial features show signs of AI manipulation",
+//     "Lighting patterns don't match claimed source",
+//     "Timestamp conflicts with claimed event date",
+//   ],
+//   explanation: "This content shows multiple signs of manipulation. The image appears to have been digitally altered, with facial features showing characteristics of AI generation. The claimed source and date do not match the metadata.",
+//   explanationNepali: "यो सामग्रीमा हेरफेरका धेरै संकेतहरू देखिन्छन्। छविमा डिजिटल परिवर्तन गरिएको देखिन्छ, अनुहारका विशेषताहरूमा AI उत्पादनका विशेषताहरू देखिन्छन्।",
+//   sources: [
+//     { title: "Original Image Source", url: "#", credibility: "High" },
+//     { title: "Fact Check: Similar Claims Debunked", url: "#", credibility: "Verified" },
+//     { title: "Press Council Nepal Statement", url: "#", credibility: "Official" },
+//   ],
+// };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      setContent("");
-    }
-  };
+// export default function VerifyPage() {
+//   const [status, setStatus] = useState<VerificationStatus>("idle");
+//   const [activeTab, setActiveTab] = useState("upload");
+//   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+//   const [textInput, setTextInput] = useState("");
+//   const [urlInput, setUrlInput] = useState("");
+//   const [progress, setProgress] = useState(0);
+//   const [result, setResult] = useState<VerificationResult | null>(null);
 
-  const handleSubmit = async () => {
-    if (!content && !file) {
-      toast({
-        title: "Error",
-        description: "Please enter content or select a file",
-        variant: "destructive",
-      });
-      return;
-    }
+//   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     const file = e.target.files?.[0];
+//     if (file) {
+//       setUploadedFile(file);
+//     }
+//   };
 
-    setIsLoading(true);
-    try {
-      const result = await submissionsAPI.submit(tokens.access, {
-        content_type: contentType,
-        content: content || file?.name || "",
-        language,
-        file,
-      });
+//   const handleStartVerification = () => {
+//     setStatus("uploading");
+//     setProgress(0);
 
-      // Get results
-      const analysisResults = await submissionsAPI.getResults(tokens.access, result.id);
-      setResults(analysisResults);
+//     const uploadInterval = setInterval(() => {
+//       setProgress((prev) => {
+//         if (prev >= 30) {
+//           clearInterval(uploadInterval);
+//           setStatus("analyzing");
+//           startAnalysis();
+//           return 30;
+//         }
+//         return prev + 5;
+//       });
+//     }, 100);
+//   };
 
-      toast({
-        title: "Success",
-        description: "Content submitted for analysis",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit content",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+//   const startAnalysis = () => {
+//     const analysisInterval = setInterval(() => {
+//       setProgress((prev) => {
+//         if (prev >= 100) {
+//           clearInterval(analysisInterval);
+//           setStatus("complete");
+//           setResult(mockResult);
+//           return 100;
+//         }
+//         return prev + 3;
+//       });
+//     }, 100);
+//   };
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
-      <main className="flex-1 container py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2">Verify Content</h1>
-            <p className="text-muted-foreground">
-              Submit content to check for misinformation, deepfakes, and manipulation
-            </p>
-          </div>
+//   const getVerdictConfig = (verdict: VerdictType) => {
+//     switch (verdict) {
+//       case "verified": return { 
+//         color: "text-verified", 
+//         bg: "bg-verified/10", 
+//         border: "border-verified/30",
+//         glow: "shadow-[0_0_40px_hsl(145_100%_50%/0.3)]"
+//       };
+//       case "suspicious": return { 
+//         color: "text-warning", 
+//         bg: "bg-warning/10", 
+//         border: "border-warning/30",
+//         glow: "shadow-[0_0_40px_hsl(45_100%_55%/0.3)]"
+//       };
+//       case "fake": return { 
+//         color: "text-danger", 
+//         bg: "bg-danger/10", 
+//         border: "border-danger/30",
+//         glow: "shadow-[0_0_40px_hsl(0_100%_60%/0.3)]"
+//       };
+//       case "uncertain": return { 
+//         color: "text-info", 
+//         bg: "bg-info/10", 
+//         border: "border-info/30",
+//         glow: "shadow-[0_0_40px_hsl(200_100%_60%/0.3)]"
+//       };
+//     }
+//   };
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Submit Form */}
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Submit Content</CardTitle>
-                <CardDescription>Choose the type of content you want to verify</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Content Type Tabs */}
-                <Tabs value={contentType} onValueChange={(val) => setContentType(val as ContentType)}>
-                  <TabsList className="grid w-full grid-cols-5">
-                    <TabsTrigger value="text">Text</TabsTrigger>
-                    <TabsTrigger value="image">Image</TabsTrigger>
-                    <TabsTrigger value="video">Video</TabsTrigger>
-                    <TabsTrigger value="audio">Audio</TabsTrigger>
-                    <TabsTrigger value="link">Link</TabsTrigger>
-                  </TabsList>
+//   const getVerdictIcon = (verdict: VerdictType) => {
+//     switch (verdict) {
+//       case "verified": return CheckCircle2;
+//       case "suspicious": return AlertTriangle;
+//       case "fake": return X;
+//       case "uncertain": return HelpCircle;
+//     }
+//   };
 
-                  <TabsContent value="text" className="space-y-4">
-                    <Textarea
-                      placeholder="Paste text content here..."
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      rows={6}
-                    />
-                  </TabsContent>
+//   const resetVerification = () => {
+//     setStatus("idle");
+//     setUploadedFile(null);
+//     setTextInput("");
+//     setUrlInput("");
+//     setProgress(0);
+//     setResult(null);
+//   };
 
-                  <TabsContent value="image" className="space-y-4">
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                      <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="hidden"
-                        id="image-input"
-                      />
-                      <label htmlFor="image-input">
-                        <Button asChild variant="outline">
-                          <span>Click to upload image</span>
-                        </Button>
-                      </label>
-                      {file && <p className="text-sm text-muted-foreground mt-2">{file.name}</p>}
-                    </div>
-                  </TabsContent>
+//   return (
+//     <div className="min-h-screen bg-background">
+//       <Header />
+      
+//       {/* Subtle background */}
+//       <div className="fixed inset-0 grid-pattern opacity-15 pointer-events-none" />
+//       <div className="fixed top-1/4 left-1/4 h-[400px] w-[400px] rounded-full bg-primary/3 blur-[150px] pointer-events-none" />
+      
+//       <main className="container relative py-8 md:py-12">
+//         {/* Page Header */}
+//         <div className="mb-8 text-center">
+//           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5">
+//             <Scan className="h-4 w-4 text-primary/80" />
+//             <span className="text-sm font-mono text-primary/80">VERIFICATION.MODULE</span>
+//           </div>
+//           <h1 className="mb-2 text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+//             Content <span className="text-gradient-cyber">Verification</span>
+//           </h1>
+//           <p className="text-muted-foreground">
+//             Upload or paste content to scan for misinformation and deepfakes
+//           </p>
+//         </div>
 
-                  <TabsContent value="video" className="space-y-4">
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                      <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                      <Input
-                        type="file"
-                        accept="video/*"
-                        onChange={handleFileChange}
-                        className="hidden"
-                        id="video-input"
-                      />
-                      <label htmlFor="video-input">
-                        <Button asChild variant="outline">
-                          <span>Click to upload video</span>
-                        </Button>
-                      </label>
-                      {file && <p className="text-sm text-muted-foreground mt-2">{file.name}</p>}
-                    </div>
-                  </TabsContent>
+//         <div className="mx-auto max-w-4xl">
+//           {status === "idle" && (
+//             <div className="rounded-xl border border-border bg-card/30 p-6 md:p-8">
+//               <Tabs value={activeTab} onValueChange={setActiveTab}>
+//                 <TabsList className="mb-6 grid w-full grid-cols-4 bg-muted/20 border border-border">
+//                   <TabsTrigger value="upload" className="gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+//                     <Upload className="h-4 w-4" />
+//                     <span className="hidden sm:inline">Upload</span>
+//                   </TabsTrigger>
+//                   <TabsTrigger value="url" className="gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+//                     <LinkIcon className="h-4 w-4" />
+//                     <span className="hidden sm:inline">URL</span>
+//                   </TabsTrigger>
+//                   <TabsTrigger value="text" className="gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+//                     <MessageSquare className="h-4 w-4" />
+//                     <span className="hidden sm:inline">Text</span>
+//                   </TabsTrigger>
+//                   <TabsTrigger value="voice" className="gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+//                     <Mic className="h-4 w-4" />
+//                     <span className="hidden sm:inline">Voice</span>
+//                   </TabsTrigger>
+//                 </TabsList>
 
-                  <TabsContent value="audio" className="space-y-4">
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                      <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                      <Input
-                        type="file"
-                        accept="audio/*"
-                        onChange={handleFileChange}
-                        className="hidden"
-                        id="audio-input"
-                      />
-                      <label htmlFor="audio-input">
-                        <Button asChild variant="outline">
-                          <span>Click to upload audio</span>
-                        </Button>
-                      </label>
-                      {file && <p className="text-sm text-muted-foreground mt-2">{file.name}</p>}
-                    </div>
-                  </TabsContent>
+//                 <TabsContent value="upload" className="space-y-4">
+//                   <label className="block">
+//                     <div className={cn(
+//                       "flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition-all",
+//                       uploadedFile 
+//                         ? "border-primary/30 bg-primary/5" 
+//                         : "border-border hover:border-primary/20 hover:bg-muted/20"
+//                     )}>
+//                       {uploadedFile ? (
+//                         <div className="flex flex-col items-center gap-2 p-6">
+//                           {uploadedFile.type.startsWith("image/") && <FileImage className="h-12 w-12 text-primary" />}
+//                           {uploadedFile.type.startsWith("video/") && <FileVideo className="h-12 w-12 text-primary" />}
+//                           {uploadedFile.type.startsWith("audio/") && <FileAudio className="h-12 w-12 text-primary" />}
+//                           <p className="font-medium text-foreground">{uploadedFile.name}</p>
+//                           <p className="text-sm text-muted-foreground font-mono">
+//                             {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+//                           </p>
+//                           <Button
+//                             variant="ghost"
+//                             size="sm"
+//                             onClick={(e) => {
+//                               e.preventDefault();
+//                               setUploadedFile(null);
+//                             }}
+//                             className="mt-2 text-muted-foreground hover:text-danger"
+//                           >
+//                             <X className="mr-1 h-4 w-4" />
+//                             Remove
+//                           </Button>
+//                         </div>
+//                       ) : (
+//                         <div className="flex flex-col items-center gap-3 p-6 text-center">
+//                           <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
+//                             <Upload className="h-8 w-8 text-primary" />
+//                           </div>
+//                           <p className="text-foreground">
+//                             Drop file here or <span className="font-medium text-primary">browse</span>
+//                           </p>
+//                           <p className="text-sm text-muted-foreground font-mono">
+//                             Images, videos, audio up to 50MB
+//                           </p>
+//                         </div>
+//                       )}
+//                     </div>
+//                     <input
+//                       type="file"
+//                       className="hidden"
+//                       accept="image/*,video/*,audio/*"
+//                       onChange={handleFileUpload}
+//                     />
+//                   </label>
 
-                  <TabsContent value="link" className="space-y-4">
-                    <Input
-                      placeholder="Paste URL here..."
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      type="url"
-                    />
-                  </TabsContent>
-                </Tabs>
+//                   <div className="flex flex-wrap gap-2">
+//                     {["JPG", "PNG", "MP4", "MP3", "WAV", "WebM"].map((format) => (
+//                       <span key={format} className="rounded border border-primary/20 bg-primary/5 px-2 py-1 text-xs font-mono text-primary/80">
+//                         {format}
+//                       </span>
+//                     ))}
+//                   </div>
+//                 </TabsContent>
 
-                {/* Language Selection */}
-                <div>
-                  <label className="text-sm font-medium">Language</label>
-                  <select
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value as "en" | "ne" | "hi")}
-                    className="w-full mt-2 px-3 py-2 border rounded-md"
-                  >
-                    <option value="en">English</option>
-                    <option value="ne">नेपाली (Nepali)</option>
-                    <option value="hi">हिंदी (Hindi)</option>
-                  </select>
-                </div>
+//                 <TabsContent value="url">
+//                   <div className="space-y-4">
+//                     <input
+//                       type="url"
+//                       value={urlInput}
+//                       onChange={(e) => setUrlInput(e.target.value)}
+//                       placeholder="Paste URL from Facebook, Twitter, TikTok, YouTube..."
+//                       className="w-full rounded-xl border border-primary/20 bg-muted/30 px-4 py-4 text-foreground placeholder-muted-foreground outline-none transition-all focus:border-primary/50 focus:shadow-neon font-mono text-sm"
+//                     />
+//                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
+//                       <Info className="h-4 w-4 text-primary/60" />
+//                       Supports social media posts, news articles, and image URLs
+//                     </div>
+//                   </div>
+//                 </TabsContent>
 
-                {/* Submit Button */}
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isLoading || (!content && !file)}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    "Analyze Content"
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+//                 <TabsContent value="text">
+//                   <div className="space-y-4">
+//                     <textarea
+//                       value={textInput}
+//                       onChange={(e) => setTextInput(e.target.value)}
+//                       placeholder="Paste text from WhatsApp, Facebook, SMS..."
+//                       rows={6}
+//                       className="w-full resize-none rounded-xl border border-primary/20 bg-muted/30 px-4 py-4 text-foreground placeholder-muted-foreground outline-none transition-all focus:border-primary/50 focus:shadow-neon"
+//                     />
+//                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
+//                       <Info className="h-4 w-4 text-primary/60" />
+//                       Works best with complete messages including context
+//                     </div>
+//                   </div>
+//                 </TabsContent>
 
-            {/* Tips */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Tips</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-medium mb-2">For Text</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Copy and paste the text you want to verify
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">For Images</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Upload to detect deepfakes and manipulation
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">For URLs</h4>
-                  <p className="text-sm text-muted-foreground">
-                    We'll check the source credibility
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+//                 <TabsContent value="voice">
+//                   <div className="flex min-h-[200px] flex-col items-center justify-center rounded-xl border border-primary/20 bg-muted/30 p-6">
+//                     <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-primary/30 bg-primary/10 shadow-neon">
+//                       <Mic className="h-10 w-10 text-primary" />
+//                     </div>
+//                     <p className="mb-2 text-lg font-medium text-foreground">Voice Input</p>
+//                     <p className="mb-4 text-center text-sm text-muted-foreground">
+//                       Speak in Nepali or English to describe content
+//                     </p>
+//                     <Button className="bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20">
+//                       <Mic className="mr-2 h-4 w-4" />
+//                       Start Recording
+//                     </Button>
+//                   </div>
+//                 </TabsContent>
+//               </Tabs>
 
-          {/* Results */}
-          {results && (
-            <div className="mt-8 space-y-6">
-              <Card className={results.misinformation_score > 0.7 ? "border-red-200" : "border-green-200"}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    {results.misinformation_score > 0.7 ? (
-                      <>
-                        <AlertTriangle className="h-5 w-5 text-red-600" />
-                        Likely Misinformation
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
-                        Appears Reliable
-                      </>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Misinformation Score</p>
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${
-                          results.misinformation_score > 0.7
-                            ? "bg-red-600"
-                            : results.misinformation_score > 0.4
-                            ? "bg-yellow-600"
-                            : "bg-green-600"
-                        }`}
-                        style={{ width: `${results.misinformation_score * 100}%` }}
-                      />
-                    </div>
-                    <p className="text-sm mt-2">{Math.round(results.misinformation_score * 100)}%</p>
-                  </div>
+//               <div className="mt-6">
+//                 <Button
+//                   size="lg"
+//                   className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-neon"
+//                   onClick={handleStartVerification}
+//                   disabled={
+//                     (activeTab === "upload" && !uploadedFile) ||
+//                     (activeTab === "url" && !urlInput) ||
+//                     (activeTab === "text" && !textInput)
+//                   }
+//                 >
+//                   <Scan className="mr-2 h-5 w-5" />
+//                   Initialize Scan
+//                 </Button>
+//               </div>
+//             </div>
+//           )}
 
-                  {results.explanation && (
-                    <div>
-                      <h4 className="font-medium mb-2">Analysis</h4>
-                      <p className="text-sm text-muted-foreground">{results.explanation}</p>
-                    </div>
-                  )}
+//           {/* Processing State */}
+//           {(status === "uploading" || status === "analyzing") && (
+//             <div className="rounded-2xl border border-primary/20 bg-card/30 p-8 text-center backdrop-blur-xl shadow-cyber">
+//               <div className="mb-6 flex justify-center">
+//                 <div className="relative">
+//                   <div className="flex h-24 w-24 items-center justify-center rounded-full border border-primary/30 bg-primary/10 shadow-neon animate-pulse-glow">
+//                     {status === "uploading" ? (
+//                       <Upload className="h-12 w-12 text-primary" />
+//                     ) : (
+//                       <Brain className="h-12 w-12 text-primary animate-pulse" />
+//                     )}
+//                   </div>
+//                   <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-primary/30 bg-background px-3 py-1 text-xs font-mono text-primary">
+//                     {progress}%
+//                   </div>
+//                 </div>
+//               </div>
 
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Share2 className="h-4 w-4 mr-2" />
-                      Share
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Flag className="h-4 w-4 mr-2" />
-                      Report
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
-      </main>
-      <Footer />
-    </div>
-  );
-}
+//               <h2 className="mb-2 text-xl font-semibold text-foreground">
+//                 {status === "uploading" ? "Uploading Content..." : "Neural Analysis..."}
+//               </h2>
+//               <p className="mb-6 text-muted-foreground font-mono text-sm">
+//                 {status === "uploading"
+//                   ? "Secure upload in progress"
+//                   : "AI models processing content"}
+//               </p>
+
+//               <Progress value={progress} className="mb-6 h-2 bg-muted/50" />
+
+//               <div className="text-sm text-muted-foreground font-mono">
+//                 {status === "analyzing" && (
+//                   <ul className="space-y-2">
+//                     <li className={cn("flex items-center justify-center gap-2", progress > 40 && "text-verified")}>
+//                       {progress > 40 ? <CheckCircle2 className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}
+//                       Checking fake news patterns
+//                     </li>
+//                     <li className={cn("flex items-center justify-center gap-2", progress > 60 && "text-verified")}>
+//                       {progress > 60 ? <CheckCircle2 className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}
+//                       Analyzing media authenticity
+//                     </li>
+//                     <li className={cn("flex items-center justify-center gap-2", progress > 80 && "text-verified")}>
+//                       {progress > 80 ? <CheckCircle2 className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}
+//                       Cross-referencing sources
+//                     </li>
+//                     <li className={cn("flex items-center justify-center gap-2", progress > 95 && "text-verified")}>
+//                       {progress > 95 ? <CheckCircle2 className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}
+//                       Generating report
+//                     </li>
+//                   </ul>
+//                 )}
+//               </div>
+//             </div>
+//           )}
+
+//           {/* Results */}
+//           {status === "complete" && result && (
+//             <div className="space-y-6">
+//               {/* Verdict Card */}
+//               {(() => {
+//                 const config = getVerdictConfig(result.verdict);
+//                 const Icon = getVerdictIcon(result.verdict);
+//                 return (
+//                   <div className={cn(
+//                     "rounded-2xl border-2 p-8 backdrop-blur-xl",
+//                     config.border,
+//                     config.bg,
+//                     config.glow
+//                   )}>
+//                     <div className="flex flex-col items-center text-center md:flex-row md:text-left">
+//                       <div className={cn("mb-4 flex h-20 w-20 items-center justify-center rounded-full border md:mb-0 md:mr-6", config.border, config.bg)}>
+//                         <Icon className={cn("h-10 w-10", config.color)} />
+//                       </div>
+//                       <div className="flex-1">
+//                         <p className={cn("mb-1 text-sm font-mono uppercase tracking-wider", config.color)}>
+//                           Verification Result
+//                         </p>
+//                         <h2 className={cn("mb-2 text-2xl font-bold capitalize md:text-3xl", config.color)}>
+//                           {result.verdict === "fake" ? "Likely Fake" : 
+//                            result.verdict === "suspicious" ? "Suspicious Content" :
+//                            result.verdict === "verified" ? "Likely Authentic" : "Uncertain"}
+//                         </h2>
+//                         <p className="text-muted-foreground">
+//                           {result.verdict === "suspicious" 
+//                             ? "This content shows signs of manipulation or misinformation"
+//                             : "Analysis complete"}
+//                         </p>
+//                       </div>
+//                     </div>
+//                   </div>
+//                 );
+//               })()}
+
+//               {/* Scores */}
+//               <div className="grid gap-4 md:grid-cols-2">
+//                 <div className="rounded-xl border border-danger/20 bg-card/30 p-6 backdrop-blur-sm">
+//                   <div className="mb-4 flex items-center justify-between">
+//                     <span className="text-sm font-mono text-muted-foreground">FAKE_NEWS_SCORE</span>
+//                     <span className="text-2xl font-bold text-danger font-mono">{result.fakeScore}%</span>
+//                   </div>
+//                   <Progress value={result.fakeScore} className="h-2 bg-muted/50" />
+//                 </div>
+//                 <div className="rounded-xl border border-warning/20 bg-card/30 p-6 backdrop-blur-sm">
+//                   <div className="mb-4 flex items-center justify-between">
+//                     <span className="text-sm font-mono text-muted-foreground">DEEPFAKE_SCORE</span>
+//                     <span className="text-2xl font-bold text-warning font-mono">{result.deepfakeScore}%</span>
+//                   </div>
+//                   <Progress value={result.deepfakeScore} className="h-2 bg-muted/50" />
+//                 </div>
+//               </div>
+
+//               {/* Manipulation Indicators */}
+//               <div className="rounded-xl border border-primary/20 bg-card/30 p-6 backdrop-blur-sm">
+//                 <h3 className="mb-4 font-semibold text-foreground flex items-center gap-2">
+//                   <AlertTriangle className="h-5 w-5 text-warning" />
+//                   Manipulation Indicators
+//                 </h3>
+//                 <ul className="space-y-2">
+//                   {result.manipulationIndicators.map((indicator, index) => (
+//                     <li key={index} className="flex items-start gap-3 rounded-lg border border-warning/20 bg-warning/5 p-3">
+//                       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+//                       <span className="text-sm text-foreground">{indicator}</span>
+//                     </li>
+//                   ))}
+//                 </ul>
+//               </div>
+
+//               {/* Explanation */}
+//               <div className="rounded-xl border border-primary/20 bg-card/30 p-6 backdrop-blur-sm">
+//                 <h3 className="mb-4 font-semibold text-foreground flex items-center gap-2">
+//                   <Brain className="h-5 w-5 text-primary" />
+//                   AI Analysis
+//                 </h3>
+//                 <div className="space-y-4">
+//                   <div className="rounded-lg border border-primary/10 bg-muted/30 p-4">
+//                     <p className="mb-1 text-xs font-mono text-primary/60">ENGLISH</p>
+//                     <p className="text-foreground">{result.explanation}</p>
+//                   </div>
+//                   <div className="rounded-lg border border-accent/10 bg-accent/5 p-4">
+//                     <p className="mb-1 text-xs font-mono text-accent/60">नेपाली</p>
+//                     <p className="text-foreground">{result.explanationNepali}</p>
+//                   </div>
+//                 </div>
+//               </div>
+
+//               {/* Action Buttons */}
+//               <div className="flex flex-wrap gap-3">
+//                 <Button className="gap-2 bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20">
+//                   <Share2 className="h-4 w-4" />
+//                   Share Result
+//                 </Button>
+//                 <Button variant="outline" className="gap-2 border-danger/30 text-danger hover:bg-danger/10">
+//                   <Flag className="h-4 w-4" />
+//                   Report Dangerous
+//                 </Button>
+//                 <Button variant="ghost" onClick={resetVerification} className="gap-2 text-muted-foreground hover:text-foreground">
+//                   <Zap className="h-4 w-4" />
+//                   New Scan
+//                 </Button>
+//               </div>
+//             </div>
+//           )}
+//         </div>
+//       </main>
+
+//       <Footer />
+//     </div>
+//   );
+// }
+
