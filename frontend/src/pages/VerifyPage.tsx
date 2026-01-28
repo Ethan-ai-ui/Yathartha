@@ -9,42 +9,34 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Upload, 
-  Link as LinkIcon, 
-  MessageSquare, 
   Loader2,
   AlertTriangle,
   CheckCircle2,
   Share2,
   Flag,
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { submissionsAPI } from "@/services/api";
+import { useAuth } from "@/contexts/useAuth";
+import submissionsAPI from "@/services/submissionsAPI";
 import { useToast } from "@/hooks/use-toast";
 
 type ContentType = "text" | "image" | "video" | "audio" | "link";
 
-interface AnalysisSource {
-  name: string;
-  credibility: number;
-}
-
 interface AnalysisResult {
   misinformation_score: number;
   explanation?: string;
-  sources?: AnalysisSource[];
   verdict?: "reliable" | "uncertain" | "misinformation";
 }
 
 export default function VerifyPage() {
   const { user, tokens } = useAuth();
   const { toast } = useToast();
+
   const [contentType, setContentType] = useState<ContentType>("text");
   const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [language, setLanguage] = useState<"en" | "ne" | "hi">("en");
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<AnalysisResult | null>(null);
-
 
   if (!user || !tokens) {
     return <Navigate to="/" />;
@@ -53,7 +45,7 @@ export default function VerifyPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
-      setContent("");
+      setContent(""); // clear text if uploading file
     }
   };
 
@@ -69,22 +61,29 @@ export default function VerifyPage() {
 
     setIsLoading(true);
     try {
-      const result = await submissionsAPI.submit(tokens.access, {
-        content_type: contentType,
-        content: content || file?.name || "",
-        language,
-        file,
-      });
+      // Build FormData for submission
+      const formData = new FormData();
+      formData.append("content_type", contentType);
+      formData.append("language", language);
+      if (file) formData.append("file", file);
+      else formData.append("content", content);
 
-      // Get results
-      const analysisResults = await submissionsAPI.getResults(tokens.access, result.id);
-      setResults(analysisResults);
+      const result = await submissionsAPI.submit(tokens.access, formData);
+
+      // Optional: fetch analysis results if your backend supports it
+      // const analysisResults = await submissionsAPI.getResults(tokens.access, result.id);
+      // setResults(analysisResults);
 
       toast({
         title: "Success",
         description: "Content submitted for analysis",
       });
+
+      // Clear input after submit
+      setContent("");
+      setFile(null);
     } catch (error) {
+      console.error(error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to submit content",
@@ -233,33 +232,6 @@ export default function VerifyPage() {
                 </Button>
               </CardContent>
             </Card>
-
-            {/* Tips */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Tips</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-medium mb-2">For Text</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Copy and paste the text you want to verify
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">For Images</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Upload to detect deepfakes and manipulation
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-2">For URLs</h4>
-                  <p className="text-sm text-muted-foreground">
-                    We'll check the source credibility
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
           {/* Results */}
@@ -305,17 +277,6 @@ export default function VerifyPage() {
                       <p className="text-sm text-muted-foreground">{results.explanation}</p>
                     </div>
                   )}
-
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Share2 className="h-4 w-4 mr-2" />
-                      Share
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Flag className="h-4 w-4 mr-2" />
-                      Report
-                    </Button>
-                  </div>
                 </CardContent>
               </Card>
             </div>

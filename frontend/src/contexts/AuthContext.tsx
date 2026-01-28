@@ -22,8 +22,6 @@ interface AuthContextType {
     role: string
   ) => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (data: UpdateProfileData) => Promise<void>;
-  changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
   isAuthenticated: boolean;
   fetchWithAuth: (
     input: RequestInfo,
@@ -127,27 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const updateProfile = async (data: UpdateProfileData) => {
-    if (!tokens?.access) throw new Error("Not authenticated");
-    setIsLoading(true);
-    try {
-      const updated = await authAPI.updateProfile(tokens.access, data);
-      setUser(updated.user || updated);
-      localStorage.setItem("user", JSON.stringify(updated.user || updated));
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const changePassword = async (oldPassword: string, newPassword: string) => {
-    if (!tokens?.access) throw new Error("Not authenticated");
-    setIsLoading(true);
-    try {
-      await authAPI.changePassword(tokens.access, oldPassword, newPassword);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // ⭐ Token-refreshing fetch
   const fetchWithAuth = async (
@@ -195,8 +173,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         login,
         signup,
         logout,
-        updateProfile,
-        changePassword,
+        // updateProfile,
+        // changePassword,
         isAuthenticated: !!user,
         fetchWithAuth,
       }}
@@ -206,10 +184,3 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-  return context;
-};
