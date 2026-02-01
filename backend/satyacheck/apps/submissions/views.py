@@ -50,7 +50,8 @@ class SubmissionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_admin_user():
+        from satyacheck.apps.users.models import User as CustomUser
+        if isinstance(user, CustomUser) and user.is_authenticated and user.is_admin_user():
             return Submission.objects.all().select_related("user", "verified_by")
         # Users see their submissions + completed public submissions
         return Submission.objects.filter(
@@ -153,15 +154,20 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         """Perform bulk actions: flag/unflag/delete/export."""
         serializer = BulkSubmissionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
-        submission_ids = serializer.validated_data["submission_ids"]
-        action = serializer.validated_data["action"]
-        reason = serializer.validated_data.get("reason", "")
+        validated_data = serializer.validated_data
+        if isinstance(validated_data, dict):
+            submission_ids = validated_data.get("submission_ids", [])
+            action = validated_data.get("action", None)
+            reason = validated_data.get("reason", "")
+        else:
+            submission_ids = []
+            action = None
+            reason = ""
 
         submissions = Submission.objects.filter(id__in=submission_ids)
 
         # Users can only perform bulk actions on their own submissions
-        if not request.user.is_admin_user():
+        if not (hasattr(request.user, "is_admin_user") and callable(getattr(request.user, "is_admin_user", None)) and request.user.is_authenticated and request.user.is_admin_user()):
             submissions = submissions.filter(user=request.user)
 
         if action == "flag":

@@ -39,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load auth from storage
+  // Restore session on refresh
   useEffect(() => {
     const storedTokens = localStorage.getItem("tokens");
     const storedUser = localStorage.getItem("user");
@@ -60,13 +60,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setError(null);
     try {
       const response = await authAPI.login({ email, password });
-      setTokens({ access: response.access, refresh: response.refresh });
+
+      const newTokens = { access: response.access, refresh: response.refresh };
+
+      setTokens(newTokens);
       setUser(response.user);
 
-      localStorage.setItem(
-        "tokens",
-        JSON.stringify({ access: response.access, refresh: response.refresh })
-      );
+      localStorage.setItem("tokens", JSON.stringify(newTokens));
       localStorage.setItem("user", JSON.stringify(response.user));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -94,13 +94,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         role: role as "citizen" | "journalist" | "ngo" | "admin",
       });
 
-      setTokens({ access: response.access, refresh: response.refresh });
+      const newTokens = { access: response.access, refresh: response.refresh };
+
+      setTokens(newTokens);
       setUser(response.user);
 
-      localStorage.setItem(
-        "tokens",
-        JSON.stringify({ access: response.access, refresh: response.refresh })
-      );
+      localStorage.setItem("tokens", JSON.stringify(newTokens));
       localStorage.setItem("user", JSON.stringify(response.user));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed");
@@ -125,9 +124,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-
-
-  // ⭐ Token-refreshing fetch
   const fetchWithAuth = async (
     input: RequestInfo,
     init: RequestInit = {}
@@ -142,13 +138,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     let response = await doFetch(tokens.access);
 
+    // Try refresh on 401
     if (response.status === 401 && tokens.refresh) {
       try {
         const refreshed = await authAPI.refreshToken(tokens.refresh);
-        const newTokens = {
-          access: refreshed.access,
-          refresh: tokens.refresh,
-        };
+        const newTokens = { access: refreshed.access, refresh: tokens.refresh };
 
         setTokens(newTokens);
         localStorage.setItem("tokens", JSON.stringify(newTokens));
@@ -173,8 +167,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         login,
         signup,
         logout,
-        // updateProfile,
-        // changePassword,
         isAuthenticated: !!user,
         fetchWithAuth,
       }}
@@ -184,3 +176,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+  return context;
+};

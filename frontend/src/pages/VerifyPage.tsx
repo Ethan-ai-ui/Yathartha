@@ -15,11 +15,11 @@ import {
   Share2,
   Flag,
 } from "lucide-react";
-import { useAuth } from "@/contexts/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import submissionsAPI from "@/services/submissionsAPI";
 import { useToast } from "@/hooks/use-toast";
 
-type ContentType = "text" | "image" | "video" | "audio" | "link";
+type SubmissionType = "text" | "image" | "video" | "audio" | "link";
 
 interface AnalysisResult {
   misinformation_score: number;
@@ -28,10 +28,11 @@ interface AnalysisResult {
 }
 
 export default function VerifyPage() {
-  const { user, tokens } = useAuth();
+  const { user, tokens, fetchWithAuth } = useAuth();
   const { toast } = useToast();
 
-  const [contentType, setContentType] = useState<ContentType>("text");
+  const [submissionType, setSubmissionType] = useState<SubmissionType>("text");
+  const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [language, setLanguage] = useState<"en" | "ne" | "hi">("en");
@@ -50,7 +51,15 @@ export default function VerifyPage() {
   };
 
   const handleSubmit = async () => {
-    if (!content && !file) {
+    if (!title.trim()) {
+      toast({
+        title: "Error",
+        description: "Title is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!content && !file && submissionType !== "link") {
       toast({
         title: "Error",
         description: "Please enter content or select a file",
@@ -61,27 +70,29 @@ export default function VerifyPage() {
 
     setIsLoading(true);
     try {
-      // Build FormData for submission
       const formData = new FormData();
-      formData.append("content_type", contentType);
+      formData.append("title", title);
+      formData.append("submission_type", submissionType);
       formData.append("language", language);
-      if (file) formData.append("file", file);
-      else formData.append("content", content);
+      // Add correct content field based on type
+      if (submissionType === "text") {
+        formData.append("text_content", content);
+      } else if (submissionType === "link") {
+        formData.append("source_url", content);
+      } else if (file) {
+        formData.append("file", file);
+      }
 
-      const result = await submissionsAPI.submit(tokens.access, formData);
-
-      // Optional: fetch analysis results if your backend supports it
-      // const analysisResults = await submissionsAPI.getResults(tokens.access, result.id);
-      // setResults(analysisResults);
+      const result = await submissionsAPI.submit(fetchWithAuth, formData);
 
       toast({
         title: "Success",
         description: "Content submitted for analysis",
       });
 
-      // Clear input after submit
       setContent("");
       setFile(null);
+      setTitle("");
     } catch (error) {
       console.error(error);
       toast({
@@ -115,7 +126,18 @@ export default function VerifyPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Content Type Tabs */}
-                <Tabs value={contentType} onValueChange={(val) => setContentType(val as ContentType)}>
+                {/* Title input */}
+                <div>
+                  <label className="text-sm font-medium">Title</label>
+                  <Input
+                    placeholder="Enter a title or headline for your submission"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="mt-2"
+                  />
+                </div>
+
+                <Tabs value={submissionType} onValueChange={(val) => setSubmissionType(val as SubmissionType)}>
                   <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="text">Text</TabsTrigger>
                     <TabsTrigger value="image">Image</TabsTrigger>

@@ -1,50 +1,67 @@
-// src/services/submissionsAPI.ts
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
+type FetchWithAuth = (input: RequestInfo, init?: RequestInit) => Promise<Response>;
+
+// Helper to extract useful error messages from backend
+async function handleResponse(res: Response) {
+  const contentType = res.headers.get("content-type");
+
+  let data: any = null;
+  if (contentType && contentType.includes("application/json")) {
+    data = await res.json().catch(() => null);
+  }
+
+  if (!res.ok) {
+    console.error("API Error:", data || res.statusText);
+
+    let message =
+      data?.detail ||
+      (typeof data === "object" && data !== null ? JSON.stringify(data) : null) ||
+      res.statusText;
+
+    if (!message || message === "null" || message === "{}") {
+      message = `Unknown error (status ${res.status})`;
+    }
+
+    throw new Error(message);
+  }
+
+  // If data is null and response is ok, return an empty object for consistency
+  return data !== null ? data : {};
+}
+
 const submissionsAPI = {
-  getSubmissions: async (token: string) => {
-    const res = await fetch(`${API_URL}/submissions/`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) throw new Error("Failed to fetch submissions");
-    return res.json();
+  getSubmissions: async (fetchWithAuth: FetchWithAuth) => {
+    const res = await fetchWithAuth(`${API_URL}/submissions/`);
+    return handleResponse(res);
   },
 
-  getSubmission: async (token: string, id: number) => {
-    const res = await fetch(`${API_URL}/submissions/${id}/`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) throw new Error("Failed to fetch submission");
-    return res.json();
+  getSubmission: async (fetchWithAuth: FetchWithAuth, id: number) => {
+    const res = await fetchWithAuth(`${API_URL}/submissions/${id}/`);
+    return handleResponse(res);
   },
 
-  submit: async (token: string, data: FormData) => {
-    const res = await fetch(`${API_URL}/submissions/`, {
+  submit: async (fetchWithAuth: FetchWithAuth, data: FormData) => {
+    const res = await fetchWithAuth(`${API_URL}/submissions/`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: data, // don't set Content-Type manually for FormData
+      body: data, // Let browser set multipart headers automatically
     });
-    if (!res.ok) throw new Error("Failed to submit");
-    return res.json();
+    return handleResponse(res);
   },
 
-  flagSubmission: async (token: string, id: number, reason: string) => {
-    const res = await fetch(`${API_URL}/submissions/${id}/flag/`, {
+  flagSubmission: async (
+    fetchWithAuth: FetchWithAuth,
+    id: number,
+    reason: string
+  ) => {
+    const res = await fetchWithAuth(`${API_URL}/submissions/${id}/flag/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ reason }),
     });
-    if (!res.ok) throw new Error("Failed to flag submission");
-    return res.json();
+    return handleResponse(res);
   },
 };
 
