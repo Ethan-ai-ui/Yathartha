@@ -8,7 +8,7 @@ type UpdateProfileData = Partial<{
   bio: string;
 }>;
 
-interface AuthContextType {
+export interface AuthContextType {
   user: AuthResponse["user"] | null;
   tokens: { access: string; refresh: string } | null;
   isLoading: boolean;
@@ -31,28 +31,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
   const [tokens, setTokens] = useState<{ access: string; refresh: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Restore session on refresh
+  // On mount, optionally fetch user/session from backend if using httpOnly cookies
   useEffect(() => {
-    const storedTokens = localStorage.getItem("tokens");
-    const storedUser = localStorage.getItem("user");
-
-    if (storedTokens && storedUser) {
-      try {
-        setTokens(JSON.parse(storedTokens));
-        setUser(JSON.parse(storedUser));
-      } catch {
-        localStorage.removeItem("tokens");
-        localStorage.removeItem("user");
-      }
-    }
+    // TODO: Implement /auth/session endpoint to get user info if using httpOnly cookies
+    // For now, clear any legacy localStorage tokens
+    localStorage.removeItem("tokens");
+    localStorage.removeItem("user");
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -66,8 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setTokens(newTokens);
       setUser(response.user);
 
-      localStorage.setItem("tokens", JSON.stringify(newTokens));
-      localStorage.setItem("user", JSON.stringify(response.user));
+      // Tokens are now in memory only; backend should set httpOnly cookies
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
       throw err;
@@ -99,8 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setTokens(newTokens);
       setUser(response.user);
 
-      localStorage.setItem("tokens", JSON.stringify(newTokens));
-      localStorage.setItem("user", JSON.stringify(response.user));
+      // Tokens are now in memory only; backend should set httpOnly cookies
     } catch (err) {
       setError(err instanceof Error ? err.message : "Signup failed");
       throw err;
@@ -109,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const logout = async () => {
+  const logout = React.useCallback(async () => {
     setIsLoading(true);
     try {
       if (tokens?.access) {
@@ -118,11 +107,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } finally {
       setTokens(null);
       setUser(null);
-      localStorage.removeItem("tokens");
-      localStorage.removeItem("user");
+      // Tokens are now in memory only; backend should clear httpOnly cookies
       setIsLoading(false);
     }
-  };
+  }, [tokens]);
+
+  // Timer-based auto-refresh for access token
+  useEffect(() => {
+    if (!tokens?.access || !tokens?.refresh) return;
+    // Decode JWT to get expiry (assume JWT, not encrypted)
+    const decode = (token: string) => {
+      try {
+        return JSON.parse(atob(token.split('.')[1]));
+      } catch {
+        return null;
+      }
+    };
+    const payload = decode(tokens.access);
+    if (!payload || !payload.exp) return;
+    const expiresIn = payload.exp * 1000 - Date.now();
+    // Refresh 30 seconds before expiry
+    const refreshTime = expiresIn - 30000;
+    if (refreshTime <= 0) return;
+    const timer = setTimeout(async () => {
+      try {
+        const refreshed = await authAPI.refreshToken(tokens.refresh);
+        setTokens({ access: refreshed.access, refresh: tokens.refresh });
+      } catch {
+        await logout();
+      }
+    }, refreshTime);
+    return () => clearTimeout(timer);
+  }, [tokens, logout]);
 
   const fetchWithAuth = async (
     input: RequestInfo,
@@ -130,31 +146,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   ): Promise<Response> => {
     if (!tokens?.access) throw new Error("Not authenticated");
 
-    const doFetch = (token: string) => {
-      const headers = new Headers(init.headers);
-      headers.set("Authorization", `Bearer ${token}`);
-      return fetch(input, { ...init, headers });
-    };
-
-    let response = await doFetch(tokens.access);
-
-    // Try refresh on 401
-    if (response.status === 401 && tokens.refresh) {
-      try {
-        const refreshed = await authAPI.refreshToken(tokens.refresh);
-        const newTokens = { access: refreshed.access, refresh: tokens.refresh };
-
-        setTokens(newTokens);
-        localStorage.setItem("tokens", JSON.stringify(newTokens));
-
-        response = await doFetch(refreshed.access);
-      } catch {
-        await logout();
-        throw new Error("Session expired. Please log in again.");
-      }
-    }
-
-    return response;
+    const headers = new Headers(init.headers);
+    headers.set("Authorization", `Bearer ${tokens.access}`);
+    return fetch(input, { ...init, headers });
   };
 
   return (
@@ -176,10 +170,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-  return context;
-};
+

@@ -15,7 +15,7 @@ import {
   Share2,
   Flag,
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import submissionsAPI from "@/services/submissionsAPI";
 import { useToast } from "@/hooks/use-toast";
 

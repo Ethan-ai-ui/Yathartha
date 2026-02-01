@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Navigate, useNavigate, Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import submissionsAPI from "@/services/submissionsAPI";
 import { analyticsAPI } from "@/services/api";
 import { Button } from "@/components/ui/button";

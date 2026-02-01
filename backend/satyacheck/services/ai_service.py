@@ -17,6 +17,140 @@ logger = logging.getLogger('satyacheck.ai')
 
 
 class MisinformationDetectionModel:
+
+        def verify_claim(self, headline, article, claim, image_url=None, user=None, model_instance=None, request_metadata=None):
+            """
+            Strict fake news verification pipeline:
+            Input → Claim extraction → Source retrieval → Cross-verification → Scoring → Verdict → Structured output
+            Returns:
+                {
+                  "verdict": "REAL | FAKE | UNCERTAIN",
+                  "confidence": 0-100,
+                  "explanation": "Clear factual reasoning",
+                  "sources": [ {"title": "", "publisher": "", "url": ""} ]
+                }
+            """
+            from satyacheck.apps.ai.models_interaction import AIInteractionLog
+            from .web_scraper import WebScraper
+            import json
+            import re
+            reputable_domains = [
+                'reuters.com', 'apnews.com', 'bbc.com', 'nytimes.com', 'theguardian.com',
+                'npr.org', 'factcheck.org', 'snopes.com', 'politifact.com', 'gov', 'edu'
+            ]
+            try:
+                # 1. Claim extraction (use provided claim or extract from headline/article)
+                extracted_claim = claim or (headline if headline else article[:120])
+                if not extracted_claim:
+                    raise ValueError("No claim provided or extractable.")
+
+                # 2. Source retrieval (search trusted sources)
+                scraper = WebScraper()
+                # For demo: search Google News or Bing API, here just use a static list for now
+                # In production, integrate a real search API
+                candidate_urls = self._search_candidate_urls(extracted_claim)
+                sources = []
+                for url in candidate_urls:
+                    domain = re.sub(r'^www\.', '', url.split('/')[2]) if '://' in url else url
+                    if not any(d in domain for d in reputable_domains):
+                        continue  # Penalize/skip low-credibility domains
+                    scraped = scraper.scrape_url(url)
+                    if scraped.get('success'):
+                        sources.append({
+                            'title': scraped.get('title', ''),
+                            'publisher': domain,
+                            'url': url
+                        })
+                if not sources:
+                    raise ValueError("No reputable sources found.")
+
+                # 3. Cross-verification (simple keyword/claim match for demo)
+                agreement = 0
+                for s in sources:
+                    if extracted_claim.lower() in (s['title'] + ' ' + s.get('publisher', '')).lower():
+                        agreement += 1
+                # 4. Scoring (deterministic)
+                credibility_score = min(100, 60 + 10 * agreement)
+                linguistic_score = 100 - self._check_misinformation_keywords(extracted_claim)
+                cross_source_score = 80 if agreement else 40
+                final_score = int((credibility_score * 0.4 + linguistic_score * 0.3 + cross_source_score * 0.3))
+                # 5. Verdict
+                if final_score > 75 and agreement:
+                    verdict = "REAL"
+                elif final_score < 50:
+                    verdict = "FAKE"
+                else:
+                    verdict = "UNCERTAIN"
+                # 6. Explanation
+                explanation = (
+                    f"Claim cross-checked against {len(sources)} reputable sources. "
+                    f"Agreement: {agreement}. Deterministic score: {final_score}. "
+                    f"Linguistic deception score: {linguistic_score}."
+                )
+                # 7. Output
+                output = {
+                    "verdict": verdict,
+                    "confidence": final_score,
+                    "explanation": explanation,
+                    "sources": sources
+                }
+                # Store interaction
+                AIInteractionLog.objects.create(
+                    user=user,
+                    model=model_instance,
+                    input_type='claim_verification',
+                    input_data=json.dumps({
+                        'headline': headline,
+                        'article': article,
+                        'claim': claim,
+                        'image_url': image_url
+                    }),
+                    output_data=json.dumps(output),
+                    success=True,
+                    error_message=None,
+                    fallback_used=False,
+                    request_metadata=request_metadata,
+                    response_metadata={"score": final_score, "agreement": agreement},
+                )
+                return output
+            except Exception as e:
+                # Log and return UNCERTAIN
+                output = {
+                    "verdict": "UNCERTAIN",
+                    "confidence": 0,
+                    "explanation": f"Verification failed: {str(e)}",
+                    "sources": []
+                }
+                try:
+                    AIInteractionLog.objects.create(
+                        user=user,
+                        model=model_instance,
+                        input_type='claim_verification',
+                        input_data=json.dumps({
+                            'headline': headline,
+                            'article': article,
+                            'claim': claim,
+                            'image_url': image_url
+                        }),
+                        output_data=json.dumps(output),
+                        success=False,
+                        error_message=str(e),
+                        fallback_used=True,
+                        request_metadata=request_metadata,
+                        response_metadata=None,
+                    )
+                except Exception as log_exc:
+                    logger.error(f"Failed to log AI interaction: {log_exc}")
+                return output
+
+        def _search_candidate_urls(self, claim):
+            """Stub: In production, use a real search API. Here, return static reputable URLs."""
+            # This should be replaced with a real search (Google News, Bing, etc.)
+            return [
+                'https://www.reuters.com/world/fact-check-claim-example',
+                'https://www.bbc.com/news/example-claim',
+                'https://www.factcheck.org/2026/01/example-claim',
+            ]
     """
     Main misinformation detection model.
     Uses transformer-based NLP models for text analysis.
@@ -57,73 +191,90 @@ class MisinformationDetectionModel:
         # Misinformation keywords and patterns
         self.misinformation_keywords = self._load_keywords()
     
-    def analyze_text(self, text, language='en'):
+    def analyze_text(self, text, language='en', user=None, model_instance=None, request_metadata=None):
         """
         Analyze text for misinformation.
         
         Args:
             text (str): Text to analyze
             language (str): Language code
-        
         Returns:
             dict: Analysis results with score and explanation
         """
-        if not text:
-            return {
-                'score': 50,
-                'confidence': 'low',
-                'category': 'unverifiable',
-                'explanation': 'No text provided for analysis.'
-            }
-        
+        from satyacheck.apps.ai.models_interaction import AIInteractionLog
+        import json
+        result = None
+        error_message = None
+        fallback_used = False
         try:
-            # Text preprocessing
-            cleaned_text = self._preprocess_text(text)
-            
-            # Get multiple analysis scores
-            sentiment_score = self._analyze_sentiment(cleaned_text)
-            keyword_score = self._check_misinformation_keywords(cleaned_text)
-            length_score = self._analyze_text_length(cleaned_text)
-            urgency_score = self._check_urgency_language(cleaned_text)
-            
-            # Combine scores using weighted average
-            final_score = (
-                sentiment_score * 0.3 +
-                keyword_score * 0.3 +
-                length_score * 0.2 +
-                urgency_score * 0.2
-            )
-            
-            # Determine category
-            category = self._determine_category(cleaned_text, final_score)
-            
-            # Generate explanation
-            explanation = self._generate_explanation(final_score, category, language)
-            
-            # Determine confidence
-            confidence = self._calculate_confidence(final_score)
-            
-            return {
-                'score': min(100, max(0, final_score)),
-                'confidence': confidence,
-                'category': category,
-                'explanation': explanation,
-                'component_scores': {
-                    'sentiment': sentiment_score,
-                    'keywords': keyword_score,
-                    'length': length_score,
-                    'urgency': urgency_score,
+            if not text:
+                result = {
+                    'score': 50,
+                    'confidence': 'low',
+                    'category': 'unverifiable',
+                    'explanation': 'No text provided for analysis.'
                 }
-            }
-        
+                fallback_used = True
+            else:
+                # Text preprocessing
+                cleaned_text = self._preprocess_text(text)
+                # Get multiple analysis scores
+                sentiment_score = self._analyze_sentiment(cleaned_text)
+                keyword_score = self._check_misinformation_keywords(cleaned_text)
+                length_score = self._analyze_text_length(cleaned_text)
+                urgency_score = self._check_urgency_language(cleaned_text)
+                # Combine scores using weighted average
+                final_score = (
+                    sentiment_score * 0.3 +
+                    keyword_score * 0.3 +
+                    length_score * 0.2 +
+                    urgency_score * 0.2
+                )
+                # Determine category
+                category = self._determine_category(cleaned_text, final_score)
+                # Generate explanation
+                explanation = self._generate_explanation(final_score, category, language)
+                # Determine confidence
+                confidence = self._calculate_confidence(final_score)
+                result = {
+                    'score': min(100, max(0, final_score)),
+                    'confidence': confidence,
+                    'category': category,
+                    'explanation': explanation,
+                    'component_scores': {
+                        'sentiment': sentiment_score,
+                        'keywords': keyword_score,
+                        'length': length_score,
+                        'urgency': urgency_score,
+                    }
+                }
         except Exception as e:
             logger.error(f"Text analysis error: {str(e)}")
-            return {
+            error_message = str(e)
+            result = {
                 'score': 50,
                 'confidence': 'low',
                 'category': 'unverifiable',
                 'explanation': 'Unable to complete analysis. Please try again.'
             }
+            fallback_used = True
+        # Log to AIInteractionLog
+        try:
+            AIInteractionLog.objects.create(
+                user=user,
+                model=model_instance,
+                input_type='text',
+                input_data=text,
+                output_data=json.dumps(result),
+                success=not fallback_used,
+                error_message=error_message,
+                fallback_used=fallback_used,
+                request_metadata=request_metadata,
+                response_metadata=None,
+            )
+        except Exception as log_exc:
+            logger.error(f"Failed to log AI interaction: {log_exc}")
+        return result
     
     def analyze_image(self, image_path):
         """

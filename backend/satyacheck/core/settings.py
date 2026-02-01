@@ -62,6 +62,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'satyacheck.core.middleware.RequestLoggingMiddleware',
+    'satyacheck.core.middleware_api_response.StandardizeAPIResponseMiddleware',
 ]
 
 ROOT_URLCONF = 'satyacheck.core.urls'
@@ -157,8 +158,9 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
     ),
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/hour',
-        'user': '1000/hour',
+        'anon': '30/hour',
+        'user': '200/hour',
+        'submission': '10/minute',
     },
     'TEST_REQUEST_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',

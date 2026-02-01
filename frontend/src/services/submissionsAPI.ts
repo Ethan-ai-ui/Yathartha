@@ -6,7 +6,7 @@ type FetchWithAuth = (input: RequestInfo, init?: RequestInit) => Promise<Respons
 async function handleResponse(res: Response) {
   const contentType = res.headers.get("content-type");
 
-  let data: any = null;
+  let data: unknown = null;
   if (contentType && contentType.includes("application/json")) {
     data = await res.json().catch(() => null);
   }
@@ -14,10 +14,18 @@ async function handleResponse(res: Response) {
   if (!res.ok) {
     console.error("API Error:", data || res.statusText);
 
-    let message =
-      data?.detail ||
-      (typeof data === "object" && data !== null ? JSON.stringify(data) : null) ||
-      res.statusText;
+    let message = (() => {
+      if (typeof data === "object" && data !== null && "detail" in data) {
+        return (data as { detail?: string }).detail;
+      }
+      if (typeof data === "object" && data !== null) {
+        return JSON.stringify(data);
+      }
+      if (typeof data === "string") {
+        return data;
+      }
+      return res.statusText;
+    })();
 
     if (!message || message === "null" || message === "{}") {
       message = `Unknown error (status ${res.status})`;

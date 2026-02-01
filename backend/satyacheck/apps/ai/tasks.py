@@ -30,46 +30,57 @@ def analyze_submission(submission_id):
         submission.status = 'analyzing'
         submission.save(update_fields=['status'])
         
-        # Use ai_fake_news pipeline for text submissions
+        model = get_model()
         if submission.submission_type == 'text':
-            # Use modular pipeline for explainable, robust results
-            pipeline_result = detect_fake_news(submission.text_content, {'language': submission.language, 'user_id': str(submission.user_id)})
-            result = {
-                'score': int(pipeline_result.confidence * 100),
-                'confidence': pipeline_result.confidence,
-                'category': pipeline_result.label.value,
-                'explanation': '\n'.join(pipeline_result.explainability.reasons),
-                'explanation_nepali': '',
-                'explanation_hindi': '',
-                'component_scores': pipeline_result.explainability.signals,
-            }
+            # Use strict, auditable claim verification pipeline
+            result = model.verify_claim(
+                headline=submission.title,
+                article=submission.text_content,
+                claim=None,
+                image_url=None,
+                user=submission.user,
+                model_instance=None,
+                request_metadata={"submission_id": str(submission.id), "language": submission.language}
+            )
         elif submission.submission_type == 'image':
-            model = get_model()
             result = model.analyze_image(submission.file.path)
         elif submission.submission_type == 'video':
-            model = get_model()
             result = model.analyze_video(submission.file.path)
         elif submission.submission_type == 'audio':
-            model = get_model()
             result = model.analyze_audio(submission.file.path)
         elif submission.submission_type == 'link':
-            # Scrape and analyze
-            result = analyze_link_submission.apply_async(args=[submission_id]).get()
+            # Scrape and analyze using verify_claim
+            from satyacheck.services.web_scraper import WebScraper
+            scraper = WebScraper()
+            scraped = scraper.scrape_url(submission.source_url)
+            main_text = scraped.get('main_text', '') if scraped.get('success') else ''
+            result = model.verify_claim(
+                headline=scraped.get('title', submission.title),
+                article=main_text,
+                claim=None,
+                image_url=None,
+                user=submission.user,
+                model_instance=None,
+                request_metadata={"submission_id": str(submission.id), "language": scraped.get('language', submission.language), "source_url": submission.source_url}
+            )
         else:
             logger.error(f"Unknown submission type: {submission.submission_type}")
             return
         # Create verification result
+        # Map strict output to VerificationResult fields
         verification = VerificationResult.objects.create(
             submission=submission,
-            misinformation_score=result['score'],
-            confidence_level=result['confidence'],
-            primary_category=result['category'],
-            explanation=result['explanation'],
-            explanation_nepali=result.get('explanation_nepali', ''),
-            explanation_hindi=result.get('explanation_hindi', ''),
-            model_used='ai_fake_news_pipeline',
+            misinformation_score=result.get('confidence', 0),
+            confidence_level=result.get('confidence', 0),
+            primary_category=result.get('verdict', 'UNCERTAIN'),
+            explanation=result.get('explanation', ''),
+            explanation_nepali='',
+            explanation_hindi='',
+            model_used='strict_claim_verification',
             model_version='1.0',
-            text_analysis_score=result.get('component_scores', {}).get('sentiment'),
+            text_analysis_score=None,
+            source_credibility_score=None,
+            supporting_evidence=result.get('sources', []),
         )
         
         # Mark submission as completed

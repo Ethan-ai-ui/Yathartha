@@ -42,6 +42,7 @@ class SubmissionViewSet(viewsets.ModelViewSet):
     """
 
     permission_classes = [IsAuthenticated]
+    throttle_scope = 'submission'
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["submission_type", "language", "status", "is_flagged"]
     search_fields = ["title", "description", "text_content"]
